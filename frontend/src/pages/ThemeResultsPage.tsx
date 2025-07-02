@@ -8,7 +8,7 @@ interface ThemeResultsPageProps {
 }
 
 const ThemeResultsPage: React.FC<ThemeResultsPageProps> = ({ themes, onThemeSelect, onBackToSelector }) => {
-  const getDifficultyEmoji = (difficulty: string) => {
+  const getDifficultyEmoji = (difficulty: ResearchTheme['difficulty']) => {
     switch (difficulty) {
       case 'easy': return '🌟';
       case 'medium': return '⭐⭐';
