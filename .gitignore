@@ -2,3 +2,4 @@
 .DS_Store
 .vscode
 .claude
+frontend/node_modules
