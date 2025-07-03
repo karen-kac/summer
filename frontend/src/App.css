@@ -392,39 +392,39 @@
   .app {
     padding: 10px;
   }
-  
+
   .header h1 {
     font-size: 2rem;
   }
-  
+
   .options-grid {
     grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
     gap: 10px;
   }
-  
+
   .themes-grid {
     grid-template-columns: 1fr;
     gap: 20px;
   }
-  
+
   .option-btn {
     min-height: 70px;
     padding: 15px 10px;
   }
-  
+
   .option-btn .emoji {
     font-size: 1.5rem;
   }
-  
+
   .option-btn .label {
     font-size: 0.9rem;
   }
-  
+
   .selected-content {
     grid-template-columns: 1fr;
     gap: 20px;
   }
-  
+
   .selected-actions {
     flex-direction: column;
     align-items: center;

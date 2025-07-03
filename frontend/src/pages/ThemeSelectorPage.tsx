@@ -72,7 +72,7 @@ const ThemeSelectorPage: React.FC<ThemeSelectorPageProps> = ({ onProfileComplete
   const handleMultiSelect = (field: keyof Pick<UserProfile, 'interests' | 'personality' | 'strengths'>, value: string) => {
     setProfile(prev => ({
       ...prev,
-      [field]: prev[field].includes(value) 
+      [field]: prev[field].includes(value)
         ? prev[field].filter(item => item !== value)
         : [...prev[field], value]
     }));
@@ -169,7 +169,7 @@ const ThemeSelectorPage: React.FC<ThemeSelectorPageProps> = ({ onProfileComplete
       </div>
 
       <div className="submit-section">
-        <button 
+        <button
           className={`submit-btn ${isComplete ? 'ready' : 'disabled'}`}
           onClick={handleSubmit}
           disabled={!isComplete}
@@ -182,4 +182,4 @@ const ThemeSelectorPage: React.FC<ThemeSelectorPageProps> = ({ onProfileComplete
   );
 };
 
-export default ThemeSelectorPage; 
+export default ThemeSelectorPage;

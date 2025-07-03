@@ -50,7 +50,7 @@ function App() {
       )}
 
       {currentState === 'results' && (
-        <ThemeResultsPage 
+        <ThemeResultsPage
           themes={generatedThemes}
           onThemeSelect={handleThemeSelect}
           onBackToSelector={handleBackToSelector}
@@ -58,7 +58,7 @@ function App() {
       )}
 
       {currentState === 'selected' && selectedTheme && (
-        <SelectedThemePage 
+        <SelectedThemePage
           theme={selectedTheme}
           onBackToResults={handleBackToResults}
           onBackToSelector={handleBackToSelector}

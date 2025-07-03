@@ -99,7 +99,7 @@ const themeTemplates = {
 
 export const generateMockThemes = (profile: UserProfile): ResearchTheme[] => {
   const themes: ResearchTheme[] = [];
-  
+
   profile.interests.forEach((interest, index) => {
     if (themeTemplates[interest as keyof typeof themeTemplates]) {
       const templates = themeTemplates[interest as keyof typeof themeTemplates];
@@ -143,7 +143,7 @@ export const generateMockThemes = (profile: UserProfile): ResearchTheme[] => {
         difficulty: 'hard' as const
       }
     ];
-    
+
     while (themes.length < 3) {
       themes.push(defaultThemes[themes.length]);
     }

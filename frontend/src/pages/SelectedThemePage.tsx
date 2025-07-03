@@ -7,10 +7,10 @@ interface SelectedThemePageProps {
   onBackToSelector: () => void;
 }
 
-const SelectedThemePage: React.FC<SelectedThemePageProps> = ({ 
-  theme, 
-  onBackToResults, 
-  onBackToSelector 
+const SelectedThemePage: React.FC<SelectedThemePageProps> = ({
+  theme,
+  onBackToResults,
+  onBackToSelector
 }) => {
   return (
     <div className="theme-selected">
@@ -19,13 +19,13 @@ const SelectedThemePage: React.FC<SelectedThemePageProps> = ({
         <h2>{theme.title}</h2>
         <p>このテーマで自由研究を進めましょう！</p>
       </div>
-      
+
       <div className="selected-content">
         <div className="description-card">
           <h3>研究テーマの概要</h3>
           <p>{theme.description}</p>
         </div>
-        
+
         <div className="materials-card">
           <h3>必要な材料・道具</h3>
           <ul>
@@ -34,7 +34,7 @@ const SelectedThemePage: React.FC<SelectedThemePageProps> = ({
             ))}
           </ul>
         </div>
-        
+
         <div className="steps-card">
           <h3>研究の進め方</h3>
           <ol>
@@ -44,7 +44,7 @@ const SelectedThemePage: React.FC<SelectedThemePageProps> = ({
           </ol>
         </div>
       </div>
-      
+
       <div className="selected-actions">
         <button className="back-btn" onClick={onBackToResults}>
           <span className="emoji">🔙</span>
@@ -59,4 +59,4 @@ const SelectedThemePage: React.FC<SelectedThemePageProps> = ({
   );
 };
 
-export default SelectedThemePage; 
+export default SelectedThemePage;

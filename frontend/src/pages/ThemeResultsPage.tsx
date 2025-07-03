@@ -43,16 +43,16 @@ const ThemeResultsPage: React.FC<ThemeResultsPageProps> = ({ themes, onThemeSele
                 <span className="label">{getDifficultyLabel(theme.difficulty)}</span>
               </div>
             </div>
-            
+
             <h3 className="theme-title">{theme.title}</h3>
             <p className="theme-description">{theme.description}</p>
-            
+
             <div className="theme-details">
               <div className="detail-item">
                 <span className="emoji">📅</span>
                 <span className="label">期間: {theme.estimatedDays}日</span>
               </div>
-              
+
               <div className="detail-item">
                 <span className="emoji">🛠️</span>
                 <span className="label">必要な材料：</span>
@@ -64,8 +64,8 @@ const ThemeResultsPage: React.FC<ThemeResultsPageProps> = ({ themes, onThemeSele
                 </ul>
               </div>
             </div>
-            
-            <button 
+
+            <button
               className="select-theme-btn"
               onClick={() => onThemeSelect(theme)}
             >
@@ -86,4 +86,4 @@ const ThemeResultsPage: React.FC<ThemeResultsPageProps> = ({ themes, onThemeSele
   );
 };
 
-export default ThemeResultsPage; 
+export default ThemeResultsPage;
