@@ -95,7 +95,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
           <div className="card-title">🚀 テーマ決め</div>
 		  <div>AIと一緒に自由研究のテーマを考えよう！</div>
 		  <div style={{ height: '10px' }}></div>
-          <button className="select-theme-btn main-action-btn" onClick={onStartNewResearch}>
+          <button className="select-theme-btn primary-action-btn" onClick={onStartNewResearch}>
             <span className="main-action-text">自由研究のテーマを決めよう！</span>
           </button>
         </div>
