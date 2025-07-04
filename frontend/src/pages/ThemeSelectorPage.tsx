@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
 import { UserProfile } from '../types';
+import '../styles/Common.css';
+import '../styles/ThemeSelector.css';
 
 interface ThemeSelectorPageProps {
   onProfileComplete: (profile: UserProfile) => void;
+  onBack: () => void;
 }
 
-const ThemeSelectorPage: React.FC<ThemeSelectorPageProps> = ({ onProfileComplete }) => {
+const ThemeSelectorPage: React.FC<ThemeSelectorPageProps> = ({ onProfileComplete, onBack }) => {
   const [profile, setProfile] = useState<UserProfile>({
     grade: '',
     interests: [],
@@ -168,7 +171,14 @@ const ThemeSelectorPage: React.FC<ThemeSelectorPageProps> = ({ onProfileComplete
         </div>
       </div>
 
-      <div className="submit-section">
+      <div className="submit-section" style={{ display: 'flex', flexDirection: 'row', justifyContent: 'center', gap: '16px' }}>
+        <button
+          className="submit-btn ready"
+          style={{ background: '#E0E0E0', color: '#333' }}
+          onClick={onBack}
+        >
+          <span className="label">戻る</span>
+        </button>
         <button
           className={`submit-btn ${isComplete ? 'ready' : 'disabled'}`}
           onClick={handleSubmit}
