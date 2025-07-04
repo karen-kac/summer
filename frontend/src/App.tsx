@@ -5,7 +5,6 @@ import ThemeResultsPage from './pages/ThemeResultsPage';
 import SelectedThemePage from './pages/SelectedThemePage';
 import { UserProfile, ResearchTheme, ResearchProject, Achievement, UserStats } from './types';
 import { generateMockThemes } from './utils/mockThemeGenerator';
-import './App.css';
 import './styles/Common.css';
 
 type AppState = 'dashboard' | 'selector' | 'results' | 'selected';
