@@ -171,10 +171,9 @@ const ThemeSelectorPage: React.FC<ThemeSelectorPageProps> = ({ onProfileComplete
         </div>
       </div>
 
-      <div className="submit-section" style={{ display: 'flex', flexDirection: 'row', justifyContent: 'center', gap: '16px' }}>
+      <div className="submit-section horizontal">
         <button
-          className="submit-btn ready"
-          style={{ background: '#E0E0E0', color: '#333' }}
+          className="submit-btn secondary"
           onClick={onBack}
         >
           <span className="label">戻る</span>

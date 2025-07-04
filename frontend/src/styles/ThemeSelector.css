@@ -58,6 +58,14 @@
   margin-top: 40px;
 }
 
+/* 水平レイアウト用のsubmit-section */
+.submit-section.horizontal {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  gap: 16px;
+}
+
 .submit-btn {
   display: inline-flex;
   align-items: center;
@@ -76,6 +84,18 @@
   background: linear-gradient(45deg, #4CAF50, #81C784);
   color: white;
   box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
+}
+
+/* 戻るボタン用のスタイル */
+.submit-btn.secondary {
+  background: #E0E0E0;
+  color: #333;
+}
+
+.submit-btn.secondary:hover {
+  background: #BDBDBD;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
 }
 
 .submit-btn.ready:hover {
