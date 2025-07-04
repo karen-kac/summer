@@ -52,6 +52,10 @@ const SelectedThemePage: React.FC<SelectedThemePageProps> = ({
           <span className="emoji">🔙</span>
           <span className="label">テーマ一覧に戻る</span>
         </button>
+        <button className="select-theme-btn">
+          <span className="emoji">🎯</span>
+          <span className="label">このテーマに決定する！</span>
+        </button>
         <button className="back-btn" onClick={onBackToSelector}>
           <span className="emoji">🔄</span>
           <span className="label">最初から選び直す</span>
