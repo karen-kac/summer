@@ -6,7 +6,7 @@ class ThemeService:
     def __init__(self, repository=None):
         self.repository = repository if repository else MockThemeRepository()
 
-    def generate_themes(self, profile: UserProfile):
+    def generate_themes(self, profile: UserProfile) -> ThemeListResponse:
         themes_data = self.repository.get_default_themes()
         themes = [ResearchTheme(**data) for data in themes_data]
         return ThemeListResponse(themes=themes)
