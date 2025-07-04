@@ -40,35 +40,7 @@
   text-align: center;
 }
 
-/* フローティングダッシュボードボタン */
-.floating-dashboard-btn {
-  position: fixed;
-  bottom: 30px;
-  right: 30px;
-  width: 60px;
-  height: 60px;
-  background: linear-gradient(45deg, #4CAF50, #81C784);
-  color: white;
-  border: none;
-  border-radius: 50%;
-  font-size: 1.5rem;
-  cursor: pointer;
-  box-shadow: 0 4px 20px rgba(76, 175, 80, 0.4);
-  transition: all 0.3s ease;
-  z-index: 1000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.floating-dashboard-btn:hover {
-  transform: translateY(-3px) scale(1.05);
-  box-shadow: 0 6px 25px rgba(76, 175, 80, 0.5);
-}
-
-.floating-dashboard-btn:active {
-  transform: translateY(-1px) scale(0.98);
-}
+/* フローティングダッシュボードボタンはCommon.cssで定義済み */
 
 /* アニメーション効果 */
 @keyframes fadeIn {
@@ -187,14 +159,7 @@
   }
 }
 
-/* フォーカス表示の改善 */
-.floating-dashboard-btn:focus,
-.primary-action-btn:focus,
-.continue-btn:focus,
-.quick-action-btn:focus {
-  outline: 3px solid #81C784;
-  outline-offset: 2px;
-}
+/* フォーカス表示の改善はCommon.cssで定義済み */
 
 /* ハイコントラストモード対応 */
 @media (prefers-contrast: high) {
@@ -211,21 +176,4 @@
   }
 }
 
-/* レスポンシブ対応 */
-@media (max-width: 768px) {
-  .app {
-    padding: 10px;
-  }
-
-  .header h1 {
-    font-size: 2rem;
-  }
-
-  .floating-dashboard-btn {
-    bottom: 20px;
-    right: 20px;
-    width: 50px;
-    height: 50px;
-    font-size: 1.2rem;
-  }
-}
+/* レスポンシブ対応はCommon.cssで定義済み */
