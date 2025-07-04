@@ -1,5 +1,7 @@
 import React from 'react';
 import { ResearchTheme } from '../types';
+import '../styles/Common.css';
+import '../styles/ThemeResults.css';
 
 interface ThemeResultsPageProps {
   themes: ResearchTheme[];
