@@ -45,9 +45,8 @@ const SplashScreen: React.FC<SplashScreenProps> = ({
   return (
     <div 
       className={`splash-screen ${fadeOut ? 'fade-out' : ''}`}
-      aria-hidden={fadeOut}
-      role="img"
-      aria-label="夏休み自由研究AIのスプラッシュスクリーン"
+      aria-hidden={!isVisible}
+      role="presentation"
     >
       <div className="splash-content">
         <div className="main-container">
