@@ -1,0 +1,98 @@
+/* 選択済みテーマ表示画面 */
+.theme-selected {
+  background: white;
+  border-radius: 20px;
+  padding: 30px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.selected-header {
+  text-align: center;
+  margin-bottom: 40px;
+  padding: 30px 20px;
+  background: linear-gradient(135deg, #E8F5E8 0%, #F1F8E9 100%);
+  border-radius: 15px;
+}
+
+.selected-header h1 {
+  font-size: 2.2rem;
+  color: #2E7D32;
+  margin-bottom: 15px;
+}
+
+.selected-header h2 {
+  font-size: 1.6rem;
+  color: #4CAF50;
+  margin-bottom: 10px;
+}
+
+.selected-header p {
+  font-size: 1.1rem;
+  color: #666;
+}
+
+.selected-content {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 25px;
+  margin-bottom: 40px;
+}
+
+.description-card,
+.materials-card,
+.steps-card {
+  background: #FAFAFA;
+  border: 2px solid #E8F5E8;
+  border-radius: 15px;
+  padding: 25px;
+}
+
+.description-card h3,
+.materials-card h3,
+.steps-card h3 {
+  font-size: 1.3rem;
+  color: #2E7D32;
+  margin-bottom: 15px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.description-card p {
+  color: #555;
+  line-height: 1.6;
+  font-size: 1.1rem;
+}
+
+.materials-card ul,
+.steps-card ol {
+  padding-left: 20px;
+  color: #555;
+}
+
+.materials-card li,
+.steps-card li {
+  margin-bottom: 8px;
+  line-height: 1.5;
+}
+
+.selected-actions {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  padding-top: 20px;
+  border-top: 2px solid #E8F5E8;
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 768px) {
+  .selected-content {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .selected-actions {
+    flex-direction: column;
+    align-items: center;
+  }
+} 
