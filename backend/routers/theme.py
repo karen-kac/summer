@@ -13,5 +13,6 @@ def sample_theme():
 
 @router.post("/generate", response_model=ThemeListResponse)
 def generate_theme(profile: UserProfile):
+    # ユーザープロファイルに基づいてテーマを生成
     themes = theme_service.generate_themes(profile=profile)
     return themes
