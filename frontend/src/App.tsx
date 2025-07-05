@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import SplashScreen from './components/SplashScreen';
 import DashboardPage from './pages/DashboardPage';
 import ThemeSelectorPage from './pages/ThemeSelectorPage';
 import ThemeResultsPage from './pages/ThemeResultsPage';
@@ -8,10 +9,10 @@ import { generateMockThemes } from './utils/mockThemeGenerator';
 import { mockActiveProjects, mockUserStats, mockRecentAchievements, mockPastProjects } from './utils/mockData';
 import './styles/Common.css';
 
-type AppState = 'dashboard' | 'selector' | 'results' | 'selected';
+type AppState = 'splash' | 'dashboard' | 'selector' | 'results' | 'selected';
 
 function App() {
-  const [currentState, setCurrentState] = useState<AppState>('dashboard');
+  const [currentState, setCurrentState] = useState<AppState>('splash');
   const [userProfile, setUserProfile] = useState<UserProfile | null>({
     grade: 'elementary4',
     interests: ['science', 'nature'],
@@ -21,6 +22,10 @@ function App() {
   });
   const [generatedThemes, setGeneratedThemes] = useState<ResearchTheme[]>([]);
   const [selectedTheme, setSelectedTheme] = useState<ResearchTheme | null>(null);
+
+  const handleSplashComplete = () => {
+    setCurrentState('dashboard');
+  };
 
   const handleStartNewResearch = () => {
     setCurrentState('selector');
@@ -86,12 +91,18 @@ function App() {
 
   return (
     <div className="app">
-      <header className="header">
-        <h1>夏休み自由研究AI</h1>
-        <p>AIがあなたにぴったりの自由研究テーマを提案します！（小学生〜中学生対象）</p>
-      </header>
+      {currentState === 'splash' && (
+        <SplashScreen onComplete={handleSplashComplete} />
+      )}
 
-      {currentState === 'dashboard' && (
+      {currentState !== 'splash' && (
+        <>
+          <header className="header">
+            <h1>夏休み自由研究AI</h1>
+            <p>AIがあなたにぴったりの自由研究テーマを提案します！（小学生〜中学生対象）</p>
+          </header>
+
+          {currentState === 'dashboard' && (
         <DashboardPage
           userProfile={userProfile}
           activeProjects={mockActiveProjects}
@@ -127,15 +138,17 @@ function App() {
         />
       )}
 
-      {/* フローティングダッシュボードボタン（ダッシュボード以外の画面で表示） */}
-      {currentState !== 'dashboard' && (
-        <button
-          className="floating-dashboard-btn"
-          onClick={handleBackToDashboard}
-          title="ダッシュボードに戻る"
-        >
-          🏠
-        </button>
+          {/* フローティングダッシュボードボタン（ダッシュボード以外の画面で表示） */}
+          {currentState !== 'dashboard' && (
+            <button
+              className="floating-dashboard-btn"
+              onClick={handleBackToDashboard}
+              title="ダッシュボードに戻る"
+            >
+              🏠
+            </button>
+          )}
+        </>
       )}
     </div>
   );
