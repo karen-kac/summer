@@ -72,12 +72,22 @@ const ThemeSelectorPage: React.FC<ThemeSelectorPageProps> = ({ onProfileComplete
     { value: 'flexible', label: '特に決まっていない', emoji: '🤷‍♀️' }
   ];
 
-  const handleMultiSelect = (field: 'interests' | 'personality' | 'strengths', value: Interest | Personality | Strength) => {
+  // 型マッピング用のtype helper
+  type FieldValueMap = {
+    interests: Interest;
+    personality: Personality;
+    strengths: Strength;
+  };
+
+  const handleMultiSelect = <T extends keyof FieldValueMap>(
+    field: T,
+    value: FieldValueMap[T]
+  ) => {
     setProfile(prev => {
-      const currentArray = prev[field] as (Interest | Personality | Strength)[];
-      const newArray = currentArray.includes(value as any)
+      const currentArray = prev[field] as FieldValueMap[T][];
+      const newArray = currentArray.includes(value)
         ? currentArray.filter(item => item !== value)
-        : [...currentArray, value as any];
+        : [...currentArray, value];
 
       return {
         ...prev,
