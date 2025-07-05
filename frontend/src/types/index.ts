@@ -1,9 +1,81 @@
+// 学年の型定義
+export type Grade =
+  | "elementary1"
+  | "elementary2"
+  | "elementary3"
+  | "elementary4"
+  | "elementary5"
+  | "elementary6"
+  | "junior1"
+  | "junior2"
+  | "junior3";
+
+// 興味分野の型定義
+export type Interest =
+  | "science"
+  | "nature"
+  | "technology"
+  | "art"
+  | "sports"
+  | "music"
+  | "cooking"
+  | "animals"
+  | "space"
+  | "history"
+  | "math";
+
+// 性格特性の型定義
+export type Personality =
+  | "curious"
+  | "patient"
+  | "creative"
+  | "active"
+  | "careful"
+  | "social"
+  | "independent"
+  | "persistent"
+  | "analytical";
+
+// 得意分野の型定義
+export type Strength =
+  | "observation"
+  | "writing"
+  | "drawing"
+  | "calculation"
+  | "experiment"
+  | "presentation"
+  | "research"
+  | "craft"
+  | "crafting"
+  | "calculating"
+  | "reading";
+
+// 研究期間の型定義
+export type Duration =
+  | "1week"
+  | "2weeks"
+  | "3weeks"
+  | "4weeks"
+  | "longer"
+  | "1month"
+  | "2months"
+  | "flexible";
+
 export interface UserProfile {
-  grade: string;
-  interests: string[];
-  personality: string[];
-  strengths: string[];
-  duration: string;
+  grade: Grade;
+  interests: Interest[];
+  personality: Personality[];
+  strengths: Strength[];
+  duration: Duration;
+}
+
+// フォーム用の部分的なUserProfile型
+export interface PartialUserProfile {
+  grade?: Grade;
+  interests: Interest[];
+  personality: Personality[];
+  strengths: Strength[];
+  duration?: Duration;
 }
 
 export interface ResearchTheme {

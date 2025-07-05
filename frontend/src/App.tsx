@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import DashboardPage from './pages/DashboardPage';
 import ThemeSelectorPage from './pages/ThemeSelectorPage';
 import ThemeResultsPage from './pages/ThemeResultsPage';
 import SelectedThemePage from './pages/SelectedThemePage';
-import { UserProfile, ResearchTheme, ResearchProject, Achievement, UserStats } from './types';
+import { UserProfile, ResearchTheme, ResearchProject } from './types';
 import { generateMockThemes } from './utils/mockThemeGenerator';
 import { mockActiveProjects, mockUserStats, mockRecentAchievements, mockPastProjects } from './utils/mockData';
 import './styles/Common.css';
