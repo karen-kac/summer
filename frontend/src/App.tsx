@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import SplashScreen from './components/SplashScreen';
+import SplashScreen from './pages/SplashScreen';
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 import DashboardPage from './pages/DashboardPage';
