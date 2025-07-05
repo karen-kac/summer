@@ -10,4 +10,3 @@ class ThemeService:
         themes_data = self.repository.get_default_themes()
         themes = [ResearchTheme(**data) for data in themes_data]
         return ThemeListResponse(themes=themes)
-#a
