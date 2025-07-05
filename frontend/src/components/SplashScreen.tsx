@@ -11,10 +11,10 @@ interface SplashScreenProps {
 const DEFAULT_FADE_DELAY = 2500; // 2.5秒後にフェードアウト開始
 const DEFAULT_COMPLETE_DELAY = 3000; // 3秒後にスプラッシュスクリーン終了
 
-const SplashScreen: React.FC<SplashScreenProps> = ({ 
-  onComplete, 
+const SplashScreen: React.FC<SplashScreenProps> = ({
+  onComplete,
   fadeDelay = DEFAULT_FADE_DELAY,
-  completeDelay = DEFAULT_COMPLETE_DELAY 
+  completeDelay = DEFAULT_COMPLETE_DELAY
 }) => {
   const [fadeOut, setFadeOut] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
@@ -43,7 +43,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({
   }
 
   return (
-    <div 
+    <div
       className={`splash-screen ${fadeOut ? 'fade-out' : ''}`}
       aria-hidden={!isVisible}
       role="presentation"
@@ -51,13 +51,13 @@ const SplashScreen: React.FC<SplashScreenProps> = ({
       <div className="splash-content">
         <div className="main-container">
           <div className="image-section">
-            <img 
-              src="/summer-removebg-preview.png" 
-              alt="自由研究アイコン" 
+            <img
+              src="/summer-removebg-preview.png"
+              alt="自由研究アイコン"
               className="main-image"
             />
           </div>
-          
+
           <div className="content-section">
             <h1 className="splash-title">
               <span className="title-line">夏休み</span>
@@ -69,11 +69,11 @@ const SplashScreen: React.FC<SplashScreenProps> = ({
           </div>
         </div>
       </div>
-      
+
       <div className="splash-background">
       </div>
     </div>
   );
 };
 
-export default SplashScreen; 
+export default SplashScreen;
