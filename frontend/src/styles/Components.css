@@ -1,0 +1,244 @@
+/* 汎用コンポーネント */
+/* ダッシュボード用グリッドレイアウト */
+.dashboard-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  margin: 32px 0;
+}
+
+.dashboard-row {
+  display: flex;
+  gap: 24px;
+  justify-content: center;
+}
+
+.dashboard-row .card {
+  flex: 1 1 0;
+  max-width: 350px;
+  min-width: 220px;
+}
+
+.dashboard-row:last-child .card {
+  max-width: 400px;
+  min-width: 250px;
+}
+
+.card {
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 4px 16px rgba(76,175,80,0.08);
+  padding: 24px 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 180px;
+  transition: box-shadow 0.2s;
+}
+
+.card:hover {
+  box-shadow: 0 8px 32px rgba(76,175,80,0.15);
+}
+
+.card-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #2E7D32;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.user-card .user-avatar {
+  font-size: 2.5rem;
+  margin-bottom: 8px;
+}
+
+.user-card .user-name {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.user-card .user-grade {
+  font-size: 1rem;
+  color: #388e3c;
+  margin-bottom: 4px;
+}
+
+.user-card .user-interests span {
+  font-size: 1.3rem;
+  margin-right: 4px;
+}
+
+.project-card-inner {
+  width: 100%;
+  margin-bottom: 10px;
+}
+
+.project-title {
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.progress-bar-outer {
+  width: 100%;
+  height: 10px;
+  background: #E8F5E8;
+  border-radius: 6px;
+  margin-bottom: 8px;
+}
+
+.progress-bar-inner {
+  height: 100%;
+  background: linear-gradient(90deg, #4CAF50, #81C784);
+  border-radius: 6px;
+}
+
+.task-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  font-size: 1rem;
+}
+
+.task-item.urgent .task-text {
+  color: #d32f2f;
+  font-weight: 700;
+}
+
+.urgent-badge {
+  background: #f44336;
+  color: #fff;
+  border-radius: 8px;
+  padding: 2px 8px;
+  font-size: 0.8rem;
+  margin-left: 6px;
+}
+
+.achievement-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  padding: 8px 12px;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.achievement-icon {
+  font-size: 1.3rem;
+}
+
+.achievement-name {
+  font-weight: 600;
+  flex: 1;
+}
+
+.achievement-points {
+  color: #2E7D32;
+  font-weight: 700;
+  background: #E8F5E8;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+/* 過去の研究カード */
+.past-project-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 8px;
+  padding: 10px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border-left: 4px solid #4CAF50;
+}
+
+.past-project-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #2E7D32;
+}
+
+.past-project-date {
+  font-size: 0.8rem;
+  color: #666;
+}
+
+.past-project-status {
+  font-size: 0.8rem;
+  color: #4CAF50;
+  font-weight: 600;
+  background: #E8F5E8;
+  padding: 2px 6px;
+  border-radius: 4px;
+  align-self: flex-start;
+}
+
+/* テーマ決定ボタン風のボタンを全体に適用 */
+.select-theme-btn,
+.main-action-btn,
+.quick-action-btn,
+.continue-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 15px;
+  background: linear-gradient(45deg, #4CAF50, #81C784);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-top: 8px;
+  box-shadow: 0 4px 15px rgba(76, 175, 80, 0.2);
+}
+
+.select-theme-btn:hover,
+.main-action-btn:hover,
+.quick-action-btn:hover,
+.continue-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(76, 175, 80, 0.3);
+}
+
+.quick-actions-row {
+  display: flex;
+  gap: 18px;
+  justify-content: center;
+  margin-top: 32px;
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 900px) {
+  .dashboard-row {
+    flex-direction: column;
+    gap: 18px;
+    align-items: center;
+  }
+
+  .dashboard-row .card {
+    max-width: 100%;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .dashboard-row:last-child .card {
+    max-width: 100%;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .quick-actions-row {
+    flex-direction: column;
+    gap: 12px;
+  }
+}

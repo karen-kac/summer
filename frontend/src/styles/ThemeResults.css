@@ -1,0 +1,135 @@
+/* テーマ結果表示画面 */
+.theme-results {
+  background: white;
+  border-radius: 20px;
+  padding: 30px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.results-header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.results-header h1 {
+  font-size: 2.2rem;
+  color: #2E7D32;
+  margin-bottom: 10px;
+}
+
+.results-header p {
+  font-size: 1.2rem;
+  color: #666;
+}
+
+.themes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 25px;
+  margin-bottom: 40px;
+}
+
+.theme-card {
+  background: #FAFAFA;
+  border: 2px solid #E8F5E8;
+  border-radius: 20px;
+  padding: 25px;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.theme-card:hover {
+  border-color: #81C784;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+  transform: translateY(-3px);
+}
+
+.theme-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.theme-number {
+  background: linear-gradient(45deg, #4CAF50, #81C784);
+  color: white;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.2rem;
+}
+
+.difficulty-badge {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: #FFF3E0;
+  padding: 8px 12px;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  color: #F57C00;
+}
+
+.theme-title {
+  font-size: 1.4rem;
+  color: #2E7D32;
+  margin-bottom: 10px;
+  font-weight: 700;
+}
+
+.theme-description {
+  color: #555;
+  line-height: 1.6;
+  margin-bottom: 20px;
+}
+
+.theme-details {
+  margin-bottom: 20px;
+}
+
+.detail-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.detail-item .emoji {
+  font-size: 1.2rem;
+}
+
+.detail-item .label {
+  font-weight: 600;
+  color: #333;
+}
+
+.materials-list {
+  list-style: none;
+  margin: 5px 0 0 30px;
+  padding: 0;
+}
+
+.materials-list li {
+  color: #666;
+  margin-bottom: 3px;
+  position: relative;
+}
+
+.materials-list li:before {
+  content: "•";
+  color: #4CAF50;
+  margin-right: 8px;
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 768px) {
+  .themes-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+}

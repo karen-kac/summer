@@ -1,5 +1,7 @@
 import React from 'react';
 import { ResearchTheme } from '../types';
+import '../styles/Common.css';
+import '../styles/SelectedTheme.css';
 
 interface SelectedThemePageProps {
   theme: ResearchTheme;
@@ -49,6 +51,10 @@ const SelectedThemePage: React.FC<SelectedThemePageProps> = ({
         <button className="back-btn" onClick={onBackToResults}>
           <span className="emoji">🔙</span>
           <span className="label">テーマ一覧に戻る</span>
+        </button>
+        <button className="select-theme-btn">
+          <span className="emoji">🎯</span>
+          <span className="label">このテーマに決定する！</span>
         </button>
         <button className="back-btn" onClick={onBackToSelector}>
           <span className="emoji">🔄</span>
