@@ -1,30 +1,134 @@
 import { useState } from 'react';
 import SplashScreen from './components/SplashScreen';
+import LoginPage from './pages/LoginPage';
+import SignupPage from './pages/SignupPage';
 import DashboardPage from './pages/DashboardPage';
 import ThemeSelectorPage from './pages/ThemeSelectorPage';
 import ThemeResultsPage from './pages/ThemeResultsPage';
 import SelectedThemePage from './pages/SelectedThemePage';
-import { UserProfile, ResearchTheme, ResearchProject } from './types';
+import { UserProfile, ResearchTheme, ResearchProject, AuthState, LoginRequest, SignupRequest, User } from './types';
 import { generateMockThemes } from './utils/mockThemeGenerator';
 import { mockActiveProjects, mockUserStats, mockRecentAchievements, mockPastProjects } from './utils/mockData';
 import './styles/Common.css';
 
-type AppState = 'splash' | 'dashboard' | 'selector' | 'results' | 'selected';
+type AppState = 'splash' | 'login' | 'signup' | 'dashboard' | 'selector' | 'results' | 'selected';
 
 function App() {
   const [currentState, setCurrentState] = useState<AppState>('splash');
-  const [userProfile, setUserProfile] = useState<UserProfile | null>({
-    grade: 'elementary4',
-    interests: ['science', 'nature'],
-    personality: ['curious', 'patient'],
-    strengths: ['observation', 'writing'],
-    duration: '2weeks'
+  const [authState, setAuthState] = useState<AuthState>({
+    isAuthenticated: false,
+    user: null,
+    token: null,
+    isLoading: false
   });
+  const [authError, setAuthError] = useState<string>('');
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [generatedThemes, setGeneratedThemes] = useState<ResearchTheme[]>([]);
   const [selectedTheme, setSelectedTheme] = useState<ResearchTheme | null>(null);
 
   const handleSplashComplete = () => {
-    setCurrentState('dashboard');
+    // 認証状態をチェック（実際の実装では、保存されたトークンなどをチェック）
+    if (authState.isAuthenticated) {
+      setCurrentState('dashboard');
+    } else {
+      setCurrentState('login');
+    }
+  };
+
+  // 認証関連のハンドラー
+  const handleLogin = async (credentials: LoginRequest): Promise<void> => {
+    setAuthState(prev => ({ ...prev, isLoading: true }));
+    setAuthError('');
+
+    try {
+      // TODO: 実際のAPIエンドポイントに置き換える
+      console.log('Logging in with:', credentials);
+
+      // モックレスポンス（実際の実装では、APIからのレスポンスを使用）
+      await new Promise(resolve => setTimeout(resolve, 1000)); // シミュレート
+
+      const mockUser: User = {
+        id: 'user-123',
+        email: credentials.email,
+        name: 'テストユーザー',
+        profile: {
+          grade: 'elementary4',
+          interests: ['science', 'nature'],
+          personality: ['curious', 'patient'],
+          strengths: ['observation', 'writing'],
+          duration: '2weeks'
+        },
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
+      setAuthState({
+        isAuthenticated: true,
+        user: mockUser,
+        token: 'mock-token-123',
+        isLoading: false
+      });
+      setUserProfile(mockUser.profile || null);
+      setCurrentState('dashboard');
+    } catch (error) {
+      setAuthError('ログインに失敗しました。メールアドレスとパスワードを確認してください。');
+      setAuthState(prev => ({ ...prev, isLoading: false }));
+    }
+  };
+
+  const handleSignup = async (credentials: SignupRequest): Promise<void> => {
+    setAuthState(prev => ({ ...prev, isLoading: true }));
+    setAuthError('');
+
+    try {
+      // TODO: 実際のAPIエンドポイントに置き換える
+      console.log('Signing up with:', credentials);
+
+      // モックレスポンス（実際の実装では、APIからのレスポンスを使用）
+      await new Promise(resolve => setTimeout(resolve, 1500)); // シミュレート
+
+      const mockUser: User = {
+        id: 'user-' + Date.now(),
+        email: credentials.email,
+        name: credentials.name,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
+      setAuthState({
+        isAuthenticated: true,
+        user: mockUser,
+        token: 'mock-token-' + Date.now(),
+        isLoading: false
+      });
+      setCurrentState('dashboard');
+    } catch (error) {
+      setAuthError('アカウント作成に失敗しました。しばらく時間をおいて再度お試しください。');
+      setAuthState(prev => ({ ...prev, isLoading: false }));
+    }
+  };
+
+  const handleLogout = () => {
+    setAuthState({
+      isAuthenticated: false,
+      user: null,
+      token: null,
+      isLoading: false
+    });
+    setUserProfile(null);
+    setGeneratedThemes([]);
+    setSelectedTheme(null);
+    setCurrentState('login');
+  };
+
+  const handleSwitchToSignup = () => {
+    setAuthError('');
+    setCurrentState('signup');
+  };
+
+  const handleSwitchToLogin = () => {
+    setAuthError('');
+    setCurrentState('login');
   };
 
   const handleStartNewResearch = () => {
@@ -95,11 +199,47 @@ function App() {
         <SplashScreen onComplete={handleSplashComplete} />
       )}
 
-      {currentState !== 'splash' && (
+            {currentState === 'login' && (
+        <LoginPage
+          onLogin={handleLogin}
+          onSwitchToSignup={handleSwitchToSignup}
+          isLoading={authState.isLoading}
+          error={authError}
+        />
+      )}
+
+      {currentState === 'signup' && (
+        <SignupPage
+          onSignup={handleSignup}
+          onSwitchToLogin={handleSwitchToLogin}
+          isLoading={authState.isLoading}
+          error={authError}
+        />
+      )}
+
+      {currentState !== 'splash' && currentState !== 'login' && currentState !== 'signup' && (
         <>
           <header className="header">
-            <h1>夏休み自由研究AI</h1>
-            <p>AIがあなたにぴったりの自由研究テーマを提案します！（小学生〜中学生対象）</p>
+            <div className="header-content">
+              <div className="header-text">
+                <h1>夏休み自由研究AI</h1>
+                <p>AIがあなたにぴったりの自由研究テーマを提案します！（小学生〜中学生対象）</p>
+              </div>
+              {authState.isAuthenticated && (
+                <div className="header-actions">
+                  <span className="user-name">
+                    {authState.user?.name}さん
+                  </span>
+                  <button
+                    className="logout-button"
+                    onClick={handleLogout}
+                    title="ログアウト"
+                  >
+                    ログアウト
+                  </button>
+                </div>
+              )}
+            </div>
           </header>
 
           {currentState === 'dashboard' && (
@@ -138,8 +278,8 @@ function App() {
         />
       )}
 
-          {/* フローティングダッシュボードボタン（ダッシュボード以外の画面で表示） */}
-          {currentState !== 'dashboard' && (
+          {/* フローティングダッシュボードボタン（ダッシュボード以外の認証済み画面で表示） */}
+          {currentState !== 'dashboard' && authState.isAuthenticated && (
             <button
               className="floating-dashboard-btn"
               onClick={handleBackToDashboard}
