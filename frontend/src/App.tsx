@@ -217,7 +217,7 @@ function App() {
 
       {/* フローティングダッシュボードボタン（ダッシュボード以外の画面で表示） */}
       {currentState !== 'dashboard' && (
-        <button 
+        <button
           className="floating-dashboard-btn"
           onClick={handleBackToDashboard}
           title="ダッシュボードに戻る"
