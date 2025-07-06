@@ -135,9 +135,17 @@ function App() {
     setCurrentState('selector');
   };
 
-  const handleProfileComplete = (profile: UserProfile) => {
+  const handleProfileComplete = async (profile: UserProfile) => {
     setUserProfile(profile);
-    const themes = generateMockThemes(profile);
+    const res = await fetch("http://localhost:8000/theme/generate", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(profile)
+    });
+    const data = await res.json();
+    const themes = data.themes;
     setGeneratedThemes(themes);
     setCurrentState('results');
   };
