@@ -5,9 +5,9 @@ from models.enums import Grade, Interest, Personality, Strength, Duration
 
 class UserProfile(BaseModel):
     grade: Grade
-    interest: List[Interest]
+    interests: List[Interest]
     personality: List[Personality]
-    strength: List[Strength]
+    strengths: List[Strength]
     duration: Duration
 
 
