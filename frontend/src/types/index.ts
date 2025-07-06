@@ -61,6 +61,12 @@ export type Duration =
   | "2months"
   | "flexible";
 
+// ジャンルの型定義
+export type Genre =
+  | "experiment"
+  | "observation"
+  | "research";
+
 export interface UserProfile {
   grade: Grade;
   interests: Interest[];
@@ -82,6 +88,7 @@ export interface ResearchTheme {
   id: string;
   title: string;
   description: string;
+  genre: Genre;
   materials: string[];
   steps: string[];
   estimatedDays: number;
