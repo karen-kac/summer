@@ -16,4 +16,3 @@ class ResearchTheme(BaseModel):
 class ThemeListResponse(BaseModel):
     themes: List[ResearchTheme]
 
-#a
