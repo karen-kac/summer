@@ -14,6 +14,16 @@ import './styles/Common.css';
 
 type AppState = 'splash' | 'login' | 'signup' | 'dashboard' | 'selector' | 'results' | 'selected' | 'active-project';
 
+// ヘルパー関数: 研究ジャンルに応じたステップ数を返す
+const getStepCount = (genre: string): number => {
+  switch (genre) {
+    case 'experiment': return 7;
+    case 'observation': return 6;
+    case 'research': return 6;
+    default: return 7;
+  }
+};
+
 function App() {
   const [currentState, setCurrentState] = useState<AppState>('splash');
   const [authState, setAuthState] = useState<AuthState>({
@@ -181,15 +191,6 @@ function App() {
       const currentProject = activeProjects[0];
 
       // 進捗度からステップインデックスを計算
-      const getStepCount = (genre: string) => {
-        switch (genre) {
-          case 'experiment': return 7;
-          case 'observation': return 6;
-          case 'research': return 6;
-          default: return 7;
-        }
-      };
-
       const totalSteps = getStepCount(currentProject.genre || 'experiment');
       const currentStepIndex = Math.floor((currentProject.progressPercentage / 100) * totalSteps);
       const stepIndex = Math.min(currentStepIndex, totalSteps - 1);
@@ -347,15 +348,6 @@ function App() {
     if (!project) return;
 
     // ステップ数を取得（研究タイプによって異なる）
-    const getStepCount = (genre: string) => {
-      switch (genre) {
-        case 'experiment': return 7;
-        case 'observation': return 6;
-        case 'research': return 6;
-        default: return 7;
-      }
-    };
-
     const totalSteps = getStepCount(project.genre || 'experiment');
     const progressPercentage = Math.round(((stepIndex + 1) / totalSteps) * 100);
 
