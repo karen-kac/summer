@@ -241,6 +241,40 @@ export interface Notification {
   createdAt: string;
 }
 
+// 認証関連の型定義
+export interface User {
+  id: string;
+  email: string;
+  name: string;
+  profile?: UserProfile;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface SignupRequest {
+  email: string;
+  password: string;
+  name: string;
+}
+
+export interface AuthResponse {
+  user: User;
+  token: string;
+  refreshToken: string;
+}
+
+export interface AuthState {
+  isAuthenticated: boolean;
+  user: User | null;
+  token: string | null;
+  isLoading: boolean;
+}
+
 // API レスポンス用の型
 export interface ApiResponse<T> {
   success: boolean;

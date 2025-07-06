@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import './SplashScreen.css';
+import '../styles/SplashScreen.css';
 
 interface SplashScreenProps {
   onComplete: () => void;
