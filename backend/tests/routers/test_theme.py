@@ -8,12 +8,6 @@ import pytest
 client = TestClient(app)
 
 
-def test_sample_theme():
-    response = client.get("/theme/sample")
-    assert response.status_code == 200
-    assert response.json() == {"message": "Sample of Theme API"}
-
-
 @pytest.fixture
 def mock_theme_service(mocker):
     mock_service = mocker.patch.object(ThemeService, "generate_themes")
