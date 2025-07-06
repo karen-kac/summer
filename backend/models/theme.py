@@ -1,11 +1,14 @@
 from pydantic import BaseModel
 from typing import List
+from models.enums import Grade, Interest, Personality, Strength, Duration
 
 
 class UserProfile(BaseModel):
-    grade: int
-    interest: str
-    strength: str
+    grade: Grade
+    interest: List[Interest]
+    personality: List[Personality]
+    strength: List[Strength]
+    duration: Duration
 
 
 class ResearchTheme(BaseModel):
