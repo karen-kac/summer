@@ -7,12 +7,14 @@ interface SelectedThemePageProps {
   theme: ResearchTheme;
   onBackToResults: () => void;
   onBackToSelector: () => void;
+  onThemeDecision: (theme: ResearchTheme) => void;
 }
 
 const SelectedThemePage: React.FC<SelectedThemePageProps> = ({
   theme,
   onBackToResults,
-  onBackToSelector
+  onBackToSelector,
+  onThemeDecision
 }) => {
   return (
     <div className="theme-selected">
@@ -52,7 +54,7 @@ const SelectedThemePage: React.FC<SelectedThemePageProps> = ({
           <span className="emoji">🔙</span>
           <span className="label">テーマ一覧に戻る</span>
         </button>
-        <button className="select-theme-btn">
+        <button className="select-theme-btn" onClick={() => onThemeDecision(theme)}>
           <span className="emoji">🎯</span>
           <span className="label">このテーマに決定する！</span>
         </button>

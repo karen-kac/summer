@@ -26,6 +26,14 @@ function App() {
   const [generatedThemes, setGeneratedThemes] = useState<ResearchTheme[]>([]);
   const [selectedTheme, setSelectedTheme] = useState<ResearchTheme | null>(null);
 
+  // プロジェクト状態の管理を追加
+  const [activeProjects, setActiveProjects] = useState<ResearchProject[]>(mockActiveProjects);
+  const [pastProjects, setPastProjects] = useState<ResearchProject[]>(mockPastProjects);
+  const [todaysTasks, setTodaysTasks] = useState([
+    { icon: '🌱', task: '植物の成長を測定しよう', urgent: true },
+    { icon: '📷', task: '実験結果の写真を撮ろう', urgent: false }
+  ]);
+
   const handleSplashComplete = () => {
     // 認証状態をチェック（実際の実装では、保存されたトークンなどをチェック）
     if (authState.isAuthenticated) {
@@ -193,6 +201,55 @@ function App() {
     // TODO: 学習コンテンツ画面に遷移
   };
 
+  const handleThemeDecision = (theme: ResearchTheme) => {
+    // 既存のアクティブプロジェクトを過去のプロジェクトに移動
+    if (activeProjects.length > 0) {
+      const currentActive = activeProjects[0];
+      const completedProject: ResearchProject = {
+        ...currentActive,
+        status: 'completed',
+        actualEndDate: new Date().toISOString().split('T')[0],
+        progressPercentage: 100,
+        updatedAt: new Date().toISOString()
+      };
+
+      setPastProjects(prev => [completedProject, ...prev]);
+    }
+
+    // 新しいプロジェクトを作成
+    const newProject: ResearchProject = {
+      id: `project-${Date.now()}`,
+      userId: authState.user?.id || 'user-1',
+      themeId: theme.id,
+      title: theme.title,
+      description: theme.description,
+      status: 'in_progress',
+      startDate: new Date().toISOString().split('T')[0],
+      targetEndDate: new Date(Date.now() + theme.estimatedDays * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      customMaterials: theme.materials,
+      customSteps: theme.steps,
+      progressPercentage: 0,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    setActiveProjects([newProject]);
+
+    // 新しいタスクを生成
+    const newTasks = [
+      { icon: '📋', task: `${theme.title}の準備を始めよう`, urgent: true },
+      { icon: '🛠️', task: '必要な材料を揃えよう', urgent: false },
+      { icon: '📖', task: '研究計画を立てよう', urgent: false }
+    ];
+
+    setTodaysTasks(newTasks);
+
+    // ダッシュボードに遷移
+    setCurrentState('dashboard');
+    setGeneratedThemes([]);
+    setSelectedTheme(null);
+  };
+
   return (
     <div className="app">
       {currentState === 'splash' && (
@@ -245,10 +302,11 @@ function App() {
           {currentState === 'dashboard' && (
         <DashboardPage
           userProfile={userProfile}
-          activeProjects={mockActiveProjects}
-          pastProjects={mockPastProjects}
+          activeProjects={activeProjects}
+          pastProjects={pastProjects}
           userStats={mockUserStats}
           recentAchievements={mockRecentAchievements}
+          todaysTasks={todaysTasks}
           onStartNewResearch={handleStartNewResearch}
           onContinueProject={handleContinueProject}
           onViewAllProjects={handleViewAllProjects}
@@ -275,6 +333,7 @@ function App() {
           theme={selectedTheme}
           onBackToResults={handleBackToResults}
           onBackToSelector={handleBackToSelector}
+          onThemeDecision={handleThemeDecision}
         />
       )}
 

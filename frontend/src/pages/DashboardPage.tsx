@@ -4,6 +4,12 @@ import '../styles/Dashboard.css';
 import '../styles/Common.css';
 import '../styles/Components.css';
 
+interface TaskItem {
+  icon: string;
+  task: string;
+  urgent: boolean;
+}
+
 interface DashboardPageProps {
   userProfile: UserProfile | null;
   activeProjects: ResearchProject[];
@@ -15,6 +21,7 @@ interface DashboardPageProps {
     currentStreak: number;
   };
   recentAchievements: Achievement[];
+  todaysTasks: TaskItem[];
   onStartNewResearch: () => void;
   onContinueProject: (project: ResearchProject) => void;
   onViewAllProjects: () => void;
@@ -29,6 +36,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
   pastProjects,
   userStats,
   recentAchievements,
+  todaysTasks,
   onStartNewResearch,
   onContinueProject,
   onViewAllProjects,
@@ -81,11 +89,6 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
     if (hour < 18) return 'こんにちは！';
     return 'こんばんは！';
   };
-
-  const todaysTasks = [
-    { icon: '🌱', task: '植物の成長を測定しよう', urgent: true },
-    { icon: '📷', task: '実験結果の写真を撮ろう', urgent: false }
-  ];
 
   return (
     <div className="dashboard-grid">
