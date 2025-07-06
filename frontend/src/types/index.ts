@@ -101,6 +101,7 @@ export interface ResearchProject {
   themeId: string;
   title: string;
   description: string;
+  genre?: Genre;
   status: 'planning' | 'in_progress' | 'completed' | 'paused';
   startDate: string;
   targetEndDate: string;

@@ -98,7 +98,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
           <div className="card-title">🚀 テーマ決め</div>
 		  <div>AIと一緒に自由研究のテーマを考えよう！</div>
 		  <div style={{ height: '10px' }}></div>
-          <button className="select-theme-btn primary-action-btn" onClick={onStartNewResearch}>
+          <button className="select-theme-btn" onClick={onStartNewResearch}>
             <span className="main-action-text">自由研究のテーマを決めよう！</span>
           </button>
         </div>
@@ -113,7 +113,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
                 <div className="progress-bar-outer">
                   <div className="progress-bar-inner" style={{ width: `${project.progressPercentage}%` }}></div>
                 </div>
-                <button className="select-theme-btn continue-btn" onClick={() => onContinueProject(project)}>
+                <button className="continue-btn" onClick={() => onContinueProject(project)}>
                   <span className="emoji">▶️</span> 続きを見る
                 </button>
               </div>
@@ -169,15 +169,15 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
       </div>
       {/* クイックアクション */}
       <div className="quick-actions-row">
-        <button className="select-theme-btn quick-action-btn" onClick={onOpenAITutor}>
+        <button className="quick-action-btn" onClick={onOpenAITutor}>
           <span className="qa-icon">🤖</span>
           <span className="qa-label">AI先生</span>
         </button>
-        <button className="select-theme-btn quick-action-btn" onClick={onViewRecords}>
+        <button className="quick-action-btn" onClick={onViewRecords}>
           <span className="qa-icon">📝</span>
           <span className="qa-label">記録</span>
         </button>
-        <button className="select-theme-btn quick-action-btn" onClick={onViewLearning}>
+        <button className="quick-action-btn" onClick={onViewLearning}>
           <span className="qa-icon">⚙️</span>
           <span className="qa-label">設定</span>
         </button>

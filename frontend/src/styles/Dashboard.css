@@ -120,6 +120,26 @@
 	box-shadow: 0 8px 25px rgba(76, 175, 80, 0.5);
   }
 
+  .select-theme-btn {
+	background: linear-gradient(45deg, #4CAF50, #81C784);
+	color: white;
+	border: none;
+	border-radius: 25px;
+	padding: 15px 30px;
+	cursor: pointer;
+	transition: all 0.3s ease;
+	box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
+	font-size: 16px;
+	font-weight: 600;
+	width: 100%;
+	text-align: center;
+  }
+
+  .select-theme-btn:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 8px 25px rgba(76, 175, 80, 0.5);
+  }
+
   .btn-icon {
 	font-size: 2.5rem;
   }
