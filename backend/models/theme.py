@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field
 from typing import List, Literal
 from models.enums import Grade, Interest, Personality, Strength, Duration
+import uuid
 
 
 class UserProfile(BaseModel):
@@ -12,7 +13,7 @@ class UserProfile(BaseModel):
 
 
 class ResearchTheme(BaseModel):
-    id: str
+    id: str = Field(default_factory=lambda: "theme_" + str(uuid.uuid4()))  # fixme?
     title: str
     description: str
     materials: List[str]

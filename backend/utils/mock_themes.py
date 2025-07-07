@@ -1,6 +1,5 @@
 MOCK_DEFAULT_THEMES = [
     {
-        "id": "default-1",
         "title": "表面張力の研究と実用性の検証",
         "description": "水の表面張力の性質を調べ、日常生活での応用例を探る物理実験です。",
         "materials": ["水", "コップ", "クリップ", "洗剤", "コイン", "針"],
@@ -15,7 +14,6 @@ MOCK_DEFAULT_THEMES = [
         "difficulty": "medium",
     },
     {
-        "id": "default-2",
         "title": "家族史から見る地域社会の変遷",
         "description": "家族の歴史を通して地域社会の変化を調べ、社会史的な視点で分析します。",
         "materials": ["ノート", "録音機器", "カメラ", "古い写真", "地図"],
@@ -30,7 +28,6 @@ MOCK_DEFAULT_THEMES = [
         "difficulty": "medium",
     },
     {
-        "id": "default-3",
         "title": "気候変動が生物に与える影響の長期観察",
         "description": "季節の変化と生物の行動や形態変化の関係を長期間観察し、気候変動の影響を考察します。",
         "materials": ["カメラ", "温度計", "湿度計", "記録ノート", "定規"],
