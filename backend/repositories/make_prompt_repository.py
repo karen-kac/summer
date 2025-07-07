@@ -66,6 +66,7 @@ class MakePromptRepository:
                 f"得意なこと: {', '.join(strengths)}\n"
                 f"研究期間: {duration}\n"
                 "これらの情報を基に、自由研究の研究テーマを3つ提案し、以下の例のようにjsonファイル形式に変換してください。\n"
+                "ただし、difficultyは難易度に応じて'easy','medium','hard'を割り振ってください。\n"
                 """
                 {
                     title: 'pH指示薬を使った酸性・アルカリ性の研究',
@@ -73,7 +74,7 @@ class MakePromptRepository:
                     materials: ['紫キャベツ', 'レモン汁', '重曹', 'お酢', '石鹸水', 'コップ', 'スポイト'],
                     steps: ['紫キャベツを煮出して指示薬を作る', '様々な液体のpHを測定', '色の変化を記録', '結果をグラフにまとめる', '考察を書く'],
                     estimatedDays: 5,
-                    difficulty: 'medium' as const
+                    difficulty: 'easy' | 'medium' | 'hard' as const
                 }
                 """
             )
