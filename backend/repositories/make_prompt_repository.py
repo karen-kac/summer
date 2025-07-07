@@ -72,8 +72,8 @@ class MakePromptRepository:
                     description: '身近な食材を使って天然のpH指示薬を作り、様々な液体の酸性・アルカリ性を調べる実験です。',
                     materials: ['紫キャベツ', 'レモン汁', '重曹', 'お酢', '石鹸水', 'コップ', 'スポイト'],
                     steps: ['紫キャベツを煮出して指示薬を作る', '様々な液体のpHを測定', '色の変化を記録', '結果をグラフにまとめる', '考察を書く'],
-                    estimatedDays: 5,
-                difficulty: 'medium' as const
+                    estimated_days: 5,
+                    difficulty: 'medium' as const
                 }
                 """
             )

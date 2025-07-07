@@ -1,8 +1,8 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List
+import uuid
 
-
-# test用の簡易class
+# フロントエンドから受け取るclass
 class UserProfileRequest(BaseModel):
     grade: str
     interests: List[str]
@@ -10,12 +10,13 @@ class UserProfileRequest(BaseModel):
     strengths: List[str]
     duration: str
 
+# フロントエンドへ送るclass
 class ThemeRecommendation(BaseModel):
-    id: str
+    id: str = Field(default_factory=lambda: "theme_" + str(uuid.uuid4()))
     title: str
     description: str
     difficulty: str
-    estimated_days: int
+    estimatedDays: int # estimated_days: int
     materials: List[str]
     steps: List[str]
-    match_score: float
+    match_score: float = Field(default=0.0)
