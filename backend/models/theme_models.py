@@ -19,4 +19,3 @@ class ThemeRecommendation(BaseModel):
     estimatedDays: int # estimated_days: int
     materials: List[str]
     steps: List[str]
-    match_score: float = Field(default=0.0)
