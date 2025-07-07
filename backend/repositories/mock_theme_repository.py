@@ -5,6 +5,6 @@ class MockThemeRepository:
     def __init__(self):
         pass
 
-    async def get_default_themes(self):
+    async def generate_themes(self, profile) -> list:
         result = MOCK_DEFAULT_THEMES.copy()
         return result
