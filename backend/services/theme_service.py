@@ -1,7 +1,6 @@
 from models.theme import UserProfile, ResearchTheme, ThemeListResponse
 from repositories.mock_theme_repository import MockThemeRepository
 
-
 class ThemeService:
     def __init__(self, repository=None):
         self.repository = repository if repository else MockThemeRepository()
