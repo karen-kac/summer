@@ -1,4 +1,5 @@
 import os
+import re
 import json
 import google.generativeai as genai
 from dotenv import load_dotenv
@@ -54,5 +55,7 @@ class GeminiClient:
 
     async def post_prompt(self, prompt: str) -> Union[dict, list]:
         res = await self.generate_content(prompt)
-        result = json.loads(res)
+        match = re.search(r'```json\s*([\s\S]*?)\s*```', res)
+        json_string = match.group(1).strip()
+        result = json.loads(json_string)
         return result
