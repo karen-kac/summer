@@ -7,23 +7,23 @@ from typing import List
 from fastapi import HTTPException
 from backend.models.theme_models import UserProfileRequest, ThemeRecommendation
 
-
-class MakeRecommendsRepository:
+# 未完成
+class MakeProgressRepository:
     """
-    プロントエンドから来た属性をプロンプトに変換するクラス
+    プロントエンドから来たテーマを進捗に変換するクラス
     """
-    def __init__(self, text: str = None):
+    def __init__(self, theme: ThemeRecommendation = None):
         try:
-           self.text = text
-           if not self.text:
+           self.theme = theme
+           if not self.theme:
                raise KeyError()
         except KeyError:
-            raise RuntimeError("プロンプト文が設定されていません。")
+            raise RuntimeError("テーマが設定されていません。")
         except Exception as e:
             # その他の初期化エラー
             raise RuntimeError(f"初期化中にエラーが発生しました: {e}")
 
-    async def generate_recommend_startproject(self) -> List[ThemeRecommendation]:
+    async def generate_recommend(self):
         """
         テキストからJSON部分を抽出し、ThemeRecommendationのリストを生成する。
         """
@@ -75,11 +75,11 @@ if __name__ == "__main__":
         except Exception as e:
             print(f"エラー: {e}")
     result = asyncio.run(generate_test())
-    recommends = MakeRecommendsRepository(text=result)
+    progress = MakeProgressRepository(text=result)
 
     async def main_test():
         try:
-            result = await recommends.generate_recommend_startproject()
+            result = await progress.generate_recommend()
             # 結果をJSON形式で出力
             print(json.dumps([item.model_dump() for item in result], ensure_ascii=False, indent=2))
             # もしくは、ThemeRecommendationのリストをそのまま出力
