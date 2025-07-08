@@ -1,6 +1,7 @@
 import pytest
 import os
 import json
+import re
 from unittest.mock import AsyncMock, patch
 from fastapi import HTTPException
 from repositories.client.gemini_client import GeminiClient
@@ -69,7 +70,8 @@ async def test_post_prompt_valid_json():
     client = GeminiClient()
 
     mock_generate_content_response = AsyncMock()
-    mock_generate_content_response.text = '{"key": "value"}'
+    # バッククォートで囲まれたJSON文字列をモック
+    mock_generate_content_response.text = '```json\n{"key": "value"}\n```'
 
     with patch(
         "repositories.client.gemini_client.GeminiClient.generate_content",
@@ -81,16 +83,17 @@ async def test_post_prompt_valid_json():
 
 
 @pytest.mark.asyncio
-async def test_post_prompt_invalid_json():
+async def test_post_prompt_invalid_json_format():
     os.environ["GEMINI_API_KEY"] = "test_api_key"
     client = GeminiClient()
 
     mock_generate_content_response = AsyncMock()
+    # バッククォートで囲まれていない無効なJSON文字列をモック
     mock_generate_content_response.text = "invalid json"
 
     with patch(
         "repositories.client.gemini_client.GeminiClient.generate_content",
         return_value=mock_generate_content_response.text,
     ):
-        with pytest.raises(json.JSONDecodeError):
+        with pytest.raises(AttributeError):  # re.searchがNoneを返すためAttributeErrorが発生
             await client.post_prompt("test prompt")
