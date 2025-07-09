@@ -1,20 +1,23 @@
 import React, { useState } from 'react';
-import { UserProfile } from '../types';
+import { UserProfile, PartialUserProfile, Grade, Interest, Personality, Strength, Duration } from '../types';
+import '../styles/Common.css';
+import '../styles/ThemeSelector.css';
 
 interface ThemeSelectorPageProps {
   onProfileComplete: (profile: UserProfile) => void;
+  onBack: () => void;
 }
 
-const ThemeSelectorPage: React.FC<ThemeSelectorPageProps> = ({ onProfileComplete }) => {
-  const [profile, setProfile] = useState<UserProfile>({
-    grade: '',
+const ThemeSelectorPage: React.FC<ThemeSelectorPageProps> = ({ onProfileComplete, onBack }) => {
+  const [profile, setProfile] = useState<PartialUserProfile>({
+    grade: undefined,
     interests: [],
     personality: [],
     strengths: [],
-    duration: ''
+    duration: undefined
   });
 
-  const gradeOptions = [
+  const gradeOptions: { value: Grade; label: string; emoji: string }[] = [
     { value: 'elementary1', label: '小学1年生', emoji: '🌟' },
     { value: 'elementary2', label: '小学2年生', emoji: '⭐' },
     { value: 'elementary3', label: '小学3年生', emoji: '✨' },
@@ -26,7 +29,7 @@ const ThemeSelectorPage: React.FC<ThemeSelectorPageProps> = ({ onProfileComplete
     { value: 'junior3', label: '中学3年生', emoji: '🎓' }
   ];
 
-  const interestOptions = [
+  const interestOptions: { value: Interest; label: string; emoji: string }[] = [
     { value: 'science', label: '理科・科学', emoji: '🔬' },
     { value: 'nature', label: '自然・環境', emoji: '🌱' },
     { value: 'animals', label: '動物・生物', emoji: '🐾' },
@@ -39,7 +42,7 @@ const ThemeSelectorPage: React.FC<ThemeSelectorPageProps> = ({ onProfileComplete
     { value: 'math', label: '数学・計算', emoji: '📊' }
   ];
 
-  const personalityOptions = [
+  const personalityOptions: { value: Personality; label: string; emoji: string }[] = [
     { value: 'curious', label: '好奇心旺盛', emoji: '🤔' },
     { value: 'patient', label: '根気強い', emoji: '😊' },
     { value: 'creative', label: '創造的', emoji: '💡' },
@@ -50,7 +53,7 @@ const ThemeSelectorPage: React.FC<ThemeSelectorPageProps> = ({ onProfileComplete
     { value: 'independent', label: '自立している', emoji: '🎯' }
   ];
 
-  const strengthOptions = [
+  const strengthOptions: { value: Strength; label: string; emoji: string }[] = [
     { value: 'observation', label: '観察', emoji: '👁️' },
     { value: 'writing', label: '文章を書く', emoji: '✍️' },
     { value: 'drawing', label: '絵を描く', emoji: '🖍️' },
@@ -61,7 +64,7 @@ const ThemeSelectorPage: React.FC<ThemeSelectorPageProps> = ({ onProfileComplete
     { value: 'experiment', label: '実験・検証', emoji: '⚗️' }
   ];
 
-  const durationOptions = [
+  const durationOptions: { value: Duration; label: string; emoji: string }[] = [
     { value: '1week', label: '1週間', emoji: '📅' },
     { value: '2weeks', label: '2週間', emoji: '📆' },
     { value: '1month', label: '1ヶ月', emoji: '🗓️' },
@@ -69,18 +72,40 @@ const ThemeSelectorPage: React.FC<ThemeSelectorPageProps> = ({ onProfileComplete
     { value: 'flexible', label: '特に決まっていない', emoji: '🤷‍♀️' }
   ];
 
-  const handleMultiSelect = (field: keyof Pick<UserProfile, 'interests' | 'personality' | 'strengths'>, value: string) => {
-    setProfile(prev => ({
-      ...prev,
-      [field]: prev[field].includes(value)
-        ? prev[field].filter(item => item !== value)
-        : [...prev[field], value]
-    }));
+  // 型マッピング用のtype helper
+  type FieldValueMap = {
+    interests: Interest;
+    personality: Personality;
+    strengths: Strength;
+  };
+
+  const handleMultiSelect = <T extends keyof FieldValueMap>(
+    field: T,
+    value: FieldValueMap[T]
+  ) => {
+    setProfile(prev => {
+      const currentArray = prev[field] as FieldValueMap[T][];
+      const newArray = currentArray.includes(value)
+        ? currentArray.filter(item => item !== value)
+        : [...currentArray, value];
+
+      return {
+        ...prev,
+        [field]: newArray
+      };
+    });
   };
 
   const handleSubmit = () => {
     if (profile.grade && profile.interests.length > 0) {
-      onProfileComplete(profile);
+      const completeProfile: UserProfile = {
+        grade: profile.grade,
+        interests: profile.interests,
+        personality: profile.personality,
+        strengths: profile.strengths,
+        duration: profile.duration || '2weeks' // デフォルト値を設定
+      };
+      onProfileComplete(completeProfile);
     }
   };
 
@@ -168,7 +193,13 @@ const ThemeSelectorPage: React.FC<ThemeSelectorPageProps> = ({ onProfileComplete
         </div>
       </div>
 
-      <div className="submit-section">
+      <div className="submit-section horizontal">
+        <button
+          className="submit-btn secondary"
+          onClick={onBack}
+        >
+          <span className="label">戻る</span>
+        </button>
         <button
           className={`submit-btn ${isComplete ? 'ready' : 'disabled'}`}
           onClick={handleSubmit}

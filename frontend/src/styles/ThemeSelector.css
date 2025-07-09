@@ -1,0 +1,180 @@
+/* テーマ選択画面 */
+.theme-selector {
+  background: white;
+  border-radius: 20px;
+  padding: 30px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.options-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.option-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 20px 15px;
+  border: 3px solid #E8F5E8;
+  border-radius: 15px;
+  background: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #333;
+  min-height: 80px;
+}
+
+.option-btn:hover {
+  border-color: #81C784;
+  background: #F1F8E9;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.option-btn.selected {
+  border-color: #4CAF50;
+  background: #E8F5E8;
+  color: #2E7D32;
+  box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+}
+
+.option-btn .emoji {
+  font-size: 2rem;
+}
+
+.option-btn .label {
+  font-size: 1rem;
+  text-align: center;
+}
+
+.submit-section {
+  text-align: center;
+  margin-top: 40px;
+}
+
+/* 水平レイアウト用のsubmit-section */
+.submit-section.horizontal {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  gap: 16px;
+}
+
+.submit-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 15px;
+  padding: 20px 40px;
+  font-size: 1.3rem;
+  font-weight: 700;
+  border: none;
+  border-radius: 25px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-height: 70px;
+}
+
+.submit-btn.ready {
+  background: linear-gradient(45deg, #4CAF50, #81C784);
+  color: white;
+  box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
+}
+
+/* 戻るボタン用のスタイル */
+.submit-btn.secondary {
+  background: #E0E0E0;
+  color: #333;
+}
+
+.submit-btn.secondary:hover {
+  background: #BDBDBD;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.submit-btn.ready:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(76, 175, 80, 0.5);
+}
+
+.submit-btn.disabled {
+  background: #E0E0E0;
+  color: #999;
+  cursor: not-allowed;
+}
+
+.select-theme-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 15px;
+  background: linear-gradient(45deg, #4CAF50, #81C784);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.select-theme-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(76, 175, 80, 0.4);
+}
+
+.back-section {
+  text-align: center;
+  padding-top: 20px;
+  border-top: 2px solid #E8F5E8;
+}
+
+.back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 15px 30px;
+  background: #F5F5F5;
+  color: #666;
+  border: 2px solid #E0E0E0;
+  border-radius: 15px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.back-btn:hover {
+  background: #EEEEEE;
+  border-color: #BDBDBD;
+  transform: translateY(-2px);
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 768px) {
+  .options-grid {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 10px;
+  }
+
+  .option-btn {
+    min-height: 70px;
+    padding: 15px 10px;
+  }
+
+  .option-btn .emoji {
+    font-size: 1.5rem;
+  }
+
+  .option-btn .label {
+    font-size: 0.9rem;
+  }
+}

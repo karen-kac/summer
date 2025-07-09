@@ -1,5 +1,7 @@
 import React from 'react';
 import { ResearchTheme } from '../types';
+import '../styles/Common.css';
+import '../styles/ThemeResults.css';
 
 interface ThemeResultsPageProps {
   themes: ResearchTheme[];
@@ -70,7 +72,7 @@ const ThemeResultsPage: React.FC<ThemeResultsPageProps> = ({ themes, onThemeSele
               onClick={() => onThemeSelect(theme)}
             >
               <span className="emoji">✨</span>
-              <span className="label">このテーマに決める！</span>
+              <span className="label">詳しくみてみる</span>
             </button>
           </div>
         ))}
