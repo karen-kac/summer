@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 from typing import List, Literal
-from models.enums import Grade, Interest, Personality, Strength, Duration
+from models.enums import Grade, Interest, Personality, Strength, Duration, Genre
 import uuid
 
 
@@ -16,6 +16,7 @@ class ResearchTheme(BaseModel):
     id: str = Field(default_factory=lambda: "theme_" + str(uuid.uuid4()))  # fixme?
     title: str
     description: str
+    genre: Genre
     materials: List[str]
     steps: List[str]
     estimated_days: int = Field(..., alias="estimatedDays")

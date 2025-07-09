@@ -24,6 +24,7 @@ async def test_generate_themes_success(sample_user_profile):
         {
             "title": "テーマ1",
             "description": "説明1",
+            "genre": "experiment",
             "materials": ["材料1"],
             "steps": ["手順1"],
             "estimatedDays": 5,
@@ -32,6 +33,7 @@ async def test_generate_themes_success(sample_user_profile):
         {
             "title": "テーマ2",
             "description": "説明2",
+            "genre": "research",
             "materials": ["材料2"],
             "steps": ["手順2"],
             "estimatedDays": 10,
@@ -70,9 +72,11 @@ async def test_generate_themes_invalid_data(sample_user_profile):
         {
             "title": "テーマ1",
             "description": "説明1",
+            "genre": "science", # genreに想定外の値を入れるエラーケース
             "materials": ["材料1"],
             "steps": ["手順1"],
-            "difficulty": "easy",  # estimatedDaysが不足
+            "estimated_days": 10,
+            "difficulty": "easy",
         }
     ]
 
