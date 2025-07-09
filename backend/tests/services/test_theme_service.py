@@ -27,7 +27,7 @@ async def test_generate_themes_success(sample_user_profile):
             "genre": "experiment",
             "materials": ["材料1"],
             "steps": ["手順1"],
-            "estimatedDays": 5,
+            "estimate_days": 5,
             "difficulty": "easy",
         },
         {
@@ -36,7 +36,7 @@ async def test_generate_themes_success(sample_user_profile):
             "genre": "research",
             "materials": ["材料2"],
             "steps": ["手順2"],
-            "estimatedDays": 10,
+            "estimated_days": 10,
             "difficulty": "medium",
         },
     ]
