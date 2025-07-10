@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { UserProfile, ResearchTheme, ResearchProject, AuthState, LoginRequest, SignupRequest, User } from '../types';
+import { UserProfile, ResearchTheme, ResearchProject, AuthState, LoginRequest, SignupRequest, User, Grade, Interest, Personality, Strength, Duration } from '../types';
 import { generateMockThemes } from '../utils/mockThemeGenerator';
 import { mockActiveProjects, mockUserStats, mockRecentAchievements, mockPastProjects } from '../utils/mockData';
 
@@ -280,10 +280,19 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       // モックレスポンス
       await new Promise(resolve => setTimeout(resolve, 1500));
 
+      const mockProfile: UserProfile = {
+        grade: 'elementary4' as Grade,
+        interests: ['science', 'nature'] as Interest[],
+        personality: ['curious', 'patient'] as Personality[],
+        strengths: ['observation', 'writing'] as Strength[],
+        duration: '2weeks' as Duration
+      };
+
       const mockUser: User = {
         id: 'user-' + Date.now(),
         email: credentials.email,
         name: credentials.name,
+        profile: mockProfile,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
@@ -294,6 +303,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         token: 'mock-token-' + Date.now(),
         isLoading: false
       });
+      setUserProfile(mockProfile);
     } catch (error) {
       setAuthError('アカウント作成に失敗しました。しばらく時間をおいて再度お試しください。');
       setAuthState(prev => ({ ...prev, isLoading: false }));
