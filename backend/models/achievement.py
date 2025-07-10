@@ -3,7 +3,7 @@ from typing import Optional, Dict, List, Any
 from datetime import date
 
 
-class Achivement(BaseModel):
+class Achievement(BaseModel):
     id: str
     name: str
     description: str
@@ -19,5 +19,5 @@ class Achivement(BaseModel):
     }
 
 
-class AchivementsListResponse(BaseModel):
-    achivements: List[Achivement]
+class AchievementsListResponse(BaseModel):
+    achievements: List[Achievement]

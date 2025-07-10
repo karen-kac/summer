@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from models.achivement import Achivement, AchivementsListResponse
+from models.achievement import Achievement, AchievementsListResponse
 from models.project import ResearchProject, ProjectsListResponse
 from services.user_service import UserService
 
@@ -7,10 +7,10 @@ router = APIRouter()
 user_service = UserService()
 
 
-@router.get("/achivement", response_model=AchivementsListResponse)
-async def get_achivement():
-    achivements = await user_service.get_achivement()
-    return achivements
+@router.get("/achievement", response_model=AchievementsListResponse)
+async def get_achievement():
+    achievements = await user_service.get_achievement()
+    return achievements
 
 
 @router.get("/project/active", response_model=ProjectsListResponse)

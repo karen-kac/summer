@@ -28,7 +28,7 @@ class DashboardData(BaseModel):
     active_projects: List[str] = Field(..., alias="activeProjects")
     past_projects: List[str] = Field(..., alias="pastProjects")
     user_stats: UserStats = Field(..., alias="userStats")
-    recent_achievements: List[str] = Field(..., alias="recentAchivements")
+    recent_achievements: List[str] = Field(..., alias="recentAchievements")
     todays_tasks: List[TaskItem] = Field(..., alias="todaysTasks")
 
     model_config = {

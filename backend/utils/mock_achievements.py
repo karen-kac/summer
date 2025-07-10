@@ -1,6 +1,6 @@
 from datetime import date
 
-MOCK_RECENT_ACHIVEMENTS = [
+MOCK_RECENT_ACHIEVEMENTS = [
     {
         "id": "achievement-1",
         "name": "初回観察完了",
