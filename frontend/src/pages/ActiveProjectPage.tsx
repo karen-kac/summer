@@ -308,7 +308,7 @@ const ActiveProjectPage: React.FC<ActiveProjectPageProps> = ({
         </div>
       </div>
 
-      <div className="content-section">
+      <div className="active-project-content">
         <div className="steps-timeline">
           <h2>研究の流れ</h2>
           <div className="timeline">

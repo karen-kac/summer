@@ -88,7 +88,7 @@
   transition: width 0.3s ease;
 }
 
-.content-section {
+.active-project-content {
   display: flex !important;
   flex-direction: row !important;
   gap: 30px !important;
@@ -306,7 +306,7 @@
 
 /* レスポンシブデザイン */
 @media (max-width: 768px) {
-  .content-section {
+  .active-project-content {
     flex-direction: column !important;
     gap: 20px !important;
   }
