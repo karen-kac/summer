@@ -5,8 +5,8 @@ from repositories import ThemeRepository, GeminiClient
 from utils import PromptBuilder
 
 router = APIRouter()
-mock_theme_service = ThemeService()
 
+# 実際のGemini APIを使用するサービス
 prompt_builder = PromptBuilder()
 gemini_client = GeminiClient()
 theme_repository = ThemeRepository(prompt_builder, gemini_client)
@@ -16,16 +16,24 @@ theme_service = ThemeService(theme_repository)
 @router.post("/generate", response_model=ThemeListResponse)
 async def generate_theme(profile: UserProfile):
     """
-    mockデータ用
+    Gemini AIを使用してテーマを生成する
     """
-    themes = await mock_theme_service.generate_themes(profile=profile)
-    return themes
+    print("=" * 50)
+    print("🎯 フロントエンドからテーマ生成リクエストを受信")
+    print(f"👤 学年: {profile.grade}")
+    print(f"❤️ 興味: {profile.interests}")
+    print(f"😊 性格: {profile.personality}")
+    print(f"💪 得意: {profile.strengths}")
+    print(f"⏰ 期間: {profile.duration}")
+    if profile.additional_info:
+        print(f"📝 追加情報: {profile.additional_info}")
+    print("=" * 50)
 
-
-@router.post("/test-prompt", response_model=ThemeListResponse)
-async def test_prompt(profile: UserProfile):
-    """
-    promptのテスト用
-    """
     themes = await theme_service.generate_themes(profile=profile)
+
+    print("✅ テーマ生成完了！生成されたテーマ:")
+    for i, theme in enumerate(themes.themes, 1):
+        print(f"  {i}. {theme.title} ({theme.genre}, {theme.estimated_days}日)")
+    print("=" * 50)
+
     return themes

@@ -83,17 +83,10 @@ class ThemeApi {
   constructor(private client: ApiClient) {}
 
   /**
-   * モックデータを使用してテーマを生成する
+   * Gemini AIを使用してテーマを生成する
    */
   async generateThemes(profile: UserProfile): Promise<ThemeListResponse> {
     return this.client.post<ThemeListResponse>('/theme/generate', profile);
-  }
-
-  /**
-   * 実際のGemini APIを使用してテーマを生成する（テスト用）
-   */
-  async generateThemesWithAI(profile: UserProfile): Promise<ThemeListResponse> {
-    return this.client.post<ThemeListResponse>('/theme/test-prompt', profile);
   }
 }
 

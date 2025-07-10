@@ -433,25 +433,27 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     );
   };
 
-    // API経由でテーマを生成する関数
-  const generateThemesFromAPI = async (profile: UserProfile, useAI: boolean = false): Promise<void> => {
+      // Gemini AIを使用してテーマを生成する関数
+  const generateThemesFromAPI = async (profile: UserProfile): Promise<void> => {
     setThemeGenerationLoading(true);
     setThemeGenerationError('');
 
     try {
-      const response = useAI
-        ? await themeApi.generateThemesWithAI(profile)
-        : await themeApi.generateThemes(profile);
+      const response = await themeApi.generateThemes(profile);
 
       setGeneratedThemes(response.themes);
-      console.log('✅ テーマ生成成功:', response.themes.length, '件のテーマを取得');
+      console.log('✅ Gemini AI テーマ生成成功:', response.themes.length, '件のテーマを取得');
     } catch (error) {
-      console.error('❌ テーマ生成エラー:', error);
+      console.error('❌ Gemini AI テーマ生成エラー:', error);
 
       if (error instanceof ApiError) {
-        setThemeGenerationError(`サーバーエラー (${error.status}): ${error.message}\n\nサーバーが起動していることを確認してください。`);
+        if (error.status === 500) {
+          setThemeGenerationError(`Gemini AI エラー: ${error.message}\n\n以下を確認してください：\n・実際のGEMINI_API_KEYが正しく設定されているか\n・インターネット接続が有効か\n・Google AI StudioでAPI制限に達していないか\n\n詳細な設定方法は backend/GEMINI_API_SETUP.md を参照してください。`);
+        } else {
+          setThemeGenerationError(`サーバーエラー (${error.status}): ${error.message}\n\nサーバーが起動していることを確認してください。`);
+        }
       } else {
-        setThemeGenerationError('テーマの生成中にエラーが発生しました。\n\n・サーバーが起動していることを確認してください\n・ネットワーク接続を確認してください\n・しばらく時間をおいて再度お試しください');
+        setThemeGenerationError('Gemini AI テーマ生成中にエラーが発生しました。\n\n・サーバーが起動していることを確認してください\n・ネットワーク接続を確認してください\n・実際のGEMINI_API_KEYが設定されていることを確認してください\n・しばらく時間をおいて再度お試しください');
       }
 
       // エラー時はテーマリストを空にする

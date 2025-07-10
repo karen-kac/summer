@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import List, Literal
+from typing import List, Literal, Optional
 from models.enums import Grade, Interest, Personality, Strength, Duration, Genre
 import uuid
 
@@ -10,6 +10,7 @@ class UserProfile(BaseModel):
     personality: List[Personality]
     strengths: List[Strength]
     duration: Duration
+    additional_info: Optional[str] = None
 
 
 class ResearchTheme(BaseModel):

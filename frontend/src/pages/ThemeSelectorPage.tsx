@@ -225,13 +225,13 @@ const ThemeSelectorPage: React.FC<ThemeSelectorPageProps> = ({ onProfileComplete
         >
           {isLoading ? (
             <>
-              <span className="emoji">⏳</span>
-              <span className="label">テーマを生成中...</span>
+              <span className="emoji">🤖</span>
+              <span className="label">AIがテーマを生成中...</span>
             </>
           ) : (
             <>
               <span className="emoji">🎉</span>
-              <span className="label">自由研究のテーマを探す！</span>
+              <span className="label">AIに自由研究のテーマを生成してもらう！</span>
             </>
           )}
         </button>

@@ -149,16 +149,21 @@ const DashboardPageWrapper: React.FC = () => {
 
 const ThemeSelectorPageWrapper: React.FC = () => {
   const navigate = useNavigate();
-  const { setUserProfile, generateThemesFromAPI, themeGenerationLoading, themeGenerationError, generatedThemes } = useApp();
+  const { setUserProfile, generateThemesFromAPI, themeGenerationLoading, themeGenerationError } = useApp();
 
   const handleProfileComplete = async (profile: any) => {
     setUserProfile(profile);
-    await generateThemesFromAPI(profile, false); // モックAPIを使用
 
-    // テーマ生成が成功した場合のみ結果ページに遷移
-    // エラーがない場合でも、テーマが空の場合は遷移しない
-    if (!themeGenerationError && generatedThemes.length > 0) {
-      navigate('/results');
+    try {
+      await generateThemesFromAPI(profile); // Gemini AIを使用
+
+      // APIが成功し、エラーがない場合は結果ページに遷移
+      if (!themeGenerationError) {
+        navigate('/results');
+      }
+    } catch (error) {
+      console.error('テーマ生成エラー:', error);
+      // エラーの場合は遷移しない（ThemeSelectorPageでエラーメッセージを表示）
     }
   };
 

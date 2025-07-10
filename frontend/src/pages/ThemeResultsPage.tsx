@@ -67,8 +67,8 @@ const ThemeResultsPage: React.FC<ThemeResultsPageProps> = ({ themes, onThemeSele
   return (
     <div className="theme-results">
       <div className="results-header">
-        <h1>🎯 あなたにおすすめの自由研究テーマ！</h1>
-        <p>{themes.length}つのテーマから選んでください</p>
+        <h1>🤖 AIがあなたのために生成した自由研究テーマ！</h1>
+        <p>あなたのプロフィールに基づいて、AIが{themes.length}つのオリジナルテーマを作成しました</p>
       </div>
 
       <div className="themes-grid">

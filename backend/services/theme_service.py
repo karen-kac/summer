@@ -1,10 +1,11 @@
 from models.theme import UserProfile, ResearchTheme, ThemeListResponse
-from repositories import MockThemeRepository
 
 
 class ThemeService:
     def __init__(self, repository=None):
-        self.repository = repository if repository else MockThemeRepository()
+        if repository is None:
+            raise ValueError("ThemeService requires a repository instance")
+        self.repository = repository
 
     async def generate_themes(self, profile: UserProfile) -> ThemeListResponse:
         themes_data = await self.repository.generate_themes(profile)
