@@ -20,9 +20,11 @@ import ThemeSelectorPage from './pages/ThemeSelectorPage';
 import ThemeResultsPage from './pages/ThemeResultsPage';
 import SelectedThemePage from './pages/SelectedThemePage';
 import ActiveProjectPage from './pages/ActiveProjectPage';
+import RecordCalendarPage from './pages/RecordCalendarPage';
 
 import { generateMockThemes } from './utils/mockThemeGenerator';
 import { mockUserStats, mockRecentAchievements } from './utils/mockData';
+import type { Record, UserProfile, ResearchProject, ResearchTheme, UserStats, Achievement } from './types';
 import './styles/Common.css';
 
 // ページコンポーネントをラップしてReact Router対応にする
@@ -120,8 +122,7 @@ const DashboardPageWrapper: React.FC = () => {
   };
 
   const handleViewRecords = () => {
-    console.log('View records');
-    // TODO: 記録一覧画面に遷移
+    navigate('/records');
   };
 
   const handleViewLearning = () => {
@@ -272,6 +273,65 @@ const ActiveProjectPageWrapper: React.FC = () => {
   );
 };
 
+const RecordCalendarPageWrapper: React.FC = () => {
+  const navigate = useNavigate();
+  const { activeProjects, records, schedules, addRecord } = useApp();
+
+  const handleBack = () => {
+    navigate('/dashboard');
+  };
+
+  const handleAddRecord = (record: Partial<Record>) => {
+    // AppContextの addRecord メソッドを使用して記録を追加
+    addRecord(record);
+
+    // 成功メッセージを表示（将来的にはtoast通知などで置き換え）
+    console.log('記録が正常に追加されました:', {
+      title: record.title,
+      type: record.recordType,
+      date: new Date(record.recordDate || '').toLocaleDateString('ja-JP')
+    });
+  };
+
+  const handleViewRecord = (record: Record) => {
+    // 記録詳細を表示（将来的にはモーダルや詳細ページで表示）
+    const recordDetails = {
+      id: record.id,
+      title: record.title,
+      type: record.recordType,
+      content: record.content,
+      date: new Date(record.recordDate).toLocaleDateString('ja-JP', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        weekday: 'long'
+      }),
+      time: new Date(record.recordDate).toLocaleTimeString('ja-JP', {
+        hour: '2-digit',
+        minute: '2-digit'
+      }),
+      projectId: record.projectId,
+      data: record.data
+    };
+
+    console.log('記録詳細:', recordDetails);
+
+    // 将来的にはここで詳細表示モーダルを開く
+    // 例: setSelectedRecord(record); setShowRecordDetailModal(true);
+  };
+
+  return (
+    <RecordCalendarPage
+      activeProjects={activeProjects}
+      records={records || []}
+      schedules={schedules || []}
+      onBack={handleBack}
+      onAddRecord={handleAddRecord}
+      onViewRecord={handleViewRecord}
+    />
+  );
+};
+
 // ルーターの設定
 const router = createBrowserRouter([
   {
@@ -313,6 +373,10 @@ const router = createBrowserRouter([
       {
         path: 'project/:id',
         element: <ActiveProjectPageWrapper />,
+      },
+      {
+        path: 'records',
+        element: <RecordCalendarPageWrapper />,
       },
     ],
   },
