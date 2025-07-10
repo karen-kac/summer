@@ -24,6 +24,7 @@ import RecordCalendarPage from './pages/RecordCalendarPage';
 
 import { generateMockThemes } from './utils/mockThemeGenerator';
 import { mockUserStats, mockRecentAchievements } from './utils/mockData';
+import { Record } from './types';
 import './styles/Common.css';
 
 // ページコンポーネントをラップしてReact Router対応にする
@@ -280,12 +281,12 @@ const RecordCalendarPageWrapper: React.FC = () => {
     navigate('/dashboard');
   };
 
-  const handleAddRecord = (record: any) => {
+  const handleAddRecord = (record: Partial<Record>) => {
     // TODO: 記録追加のロジックを実装
     console.log('Add record:', record);
   };
 
-  const handleViewRecord = (record: any) => {
+  const handleViewRecord = (record: Record) => {
     // TODO: 記録詳細表示のロジックを実装
     console.log('View record:', record);
   };
