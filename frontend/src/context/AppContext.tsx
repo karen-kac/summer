@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { UserProfile, ResearchTheme, ResearchProject, AuthState, LoginRequest, SignupRequest, User, Grade, Interest, Personality, Strength, Duration } from '../types';
+import { UserProfile, ResearchTheme, ResearchProject, AuthState, LoginRequest, SignupRequest, User, Grade, Interest, Personality, Strength, Duration, Record, Schedule } from '../types';
 import { generateMockThemes } from '../utils/mockThemeGenerator';
-import { mockActiveProjects, mockUserStats, mockRecentAchievements, mockPastProjects } from '../utils/mockData';
+import { mockActiveProjects, mockUserStats, mockRecentAchievements, mockPastProjects, mockRecords, mockSchedules } from '../utils/mockData';
 
 // ヘルパー関数: 研究ジャンルに応じたステップ数を返す
 const getStepCount = (genre: string): number => {
@@ -24,6 +24,10 @@ interface AppContextType {
   pastProjects: ResearchProject[];
   selectedProject: ResearchProject | null;
   todaysTasks: Array<{ icon: string; task: string; urgent: boolean }>;
+
+  // 記録・スケジュール関連
+  records: Record[];
+  schedules: Schedule[];
 
   // テーマ関連
   generatedThemes: ResearchTheme[];
@@ -72,6 +76,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   // プロジェクト状態の管理を追加
   const [activeProjects, setActiveProjects] = useState<ResearchProject[]>(mockActiveProjects);
   const [pastProjects, setPastProjects] = useState<ResearchProject[]>(mockPastProjects);
+  const [records, setRecords] = useState<Record[]>(mockRecords);
+  const [schedules, setSchedules] = useState<Schedule[]>(mockSchedules);
   const [todaysTasks, setTodaysTasks] = useState([
     { icon: '🌱', task: '植物の成長を測定しよう', urgent: true },
     { icon: '📷', task: '実験結果の写真を撮ろう', urgent: false }
@@ -398,6 +404,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     pastProjects,
     selectedProject,
     todaysTasks,
+    records,
+    schedules,
     generatedThemes,
     selectedTheme,
     handleLogin,

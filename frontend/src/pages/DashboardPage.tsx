@@ -175,7 +175,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
         </button>
         <button className="quick-action-btn" onClick={onViewRecords}>
           <span className="qa-icon">📝</span>
-          <span className="qa-label">記録</span>
+          <span className="qa-label">記録カレンダー</span>
         </button>
         <button className="quick-action-btn" onClick={onViewLearning}>
           <span className="qa-icon">⚙️</span>

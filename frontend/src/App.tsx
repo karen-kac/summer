@@ -20,6 +20,7 @@ import ThemeSelectorPage from './pages/ThemeSelectorPage';
 import ThemeResultsPage from './pages/ThemeResultsPage';
 import SelectedThemePage from './pages/SelectedThemePage';
 import ActiveProjectPage from './pages/ActiveProjectPage';
+import RecordCalendarPage from './pages/RecordCalendarPage';
 
 import { generateMockThemes } from './utils/mockThemeGenerator';
 import { mockUserStats, mockRecentAchievements } from './utils/mockData';
@@ -120,8 +121,7 @@ const DashboardPageWrapper: React.FC = () => {
   };
 
   const handleViewRecords = () => {
-    console.log('View records');
-    // TODO: 記録一覧画面に遷移
+    navigate('/records');
   };
 
   const handleViewLearning = () => {
@@ -272,6 +272,36 @@ const ActiveProjectPageWrapper: React.FC = () => {
   );
 };
 
+const RecordCalendarPageWrapper: React.FC = () => {
+  const navigate = useNavigate();
+  const { activeProjects, records, schedules } = useApp();
+
+  const handleBack = () => {
+    navigate('/dashboard');
+  };
+
+  const handleAddRecord = (record: any) => {
+    // TODO: 記録追加のロジックを実装
+    console.log('Add record:', record);
+  };
+
+  const handleViewRecord = (record: any) => {
+    // TODO: 記録詳細表示のロジックを実装
+    console.log('View record:', record);
+  };
+
+  return (
+    <RecordCalendarPage
+      activeProjects={activeProjects}
+      records={records || []}
+      schedules={schedules || []}
+      onBack={handleBack}
+      onAddRecord={handleAddRecord}
+      onViewRecord={handleViewRecord}
+    />
+  );
+};
+
 // ルーターの設定
 const router = createBrowserRouter([
   {
@@ -313,6 +343,10 @@ const router = createBrowserRouter([
       {
         path: 'project/:id',
         element: <ActiveProjectPageWrapper />,
+      },
+      {
+        path: 'records',
+        element: <RecordCalendarPageWrapper />,
       },
     ],
   },
