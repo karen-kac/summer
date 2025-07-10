@@ -21,7 +21,6 @@ class Personality(str, Enum):
     careful = "careful"
     social = "social"
     independent = "independent"
-    persistent = "persistent"
     analytical = "analytical"
 
     @property

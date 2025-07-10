@@ -24,7 +24,6 @@ class Interest(str, Enum):
     music = "music"
     cooking = "cooking"
     animals = "animals"
-    space = "space"
     history = "history"
     math = "math"
 

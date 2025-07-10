@@ -20,8 +20,6 @@ class Strength(str, Enum):
     calculation = "calculation"
     experiment = "experiment"
     presentation = "presentation"
-    research = "research"
-    craft = "craft"
     crafting = "crafting"
     calculating = "calculating"
     reading = "reading"
