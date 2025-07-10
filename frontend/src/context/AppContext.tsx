@@ -44,6 +44,8 @@ interface AppContextType {
   handleUpdateProjectProgress: (projectId: string, stepIndex: number) => void;
   handleThemeDecision: (theme: ResearchTheme) => void;
   generateTasksForProject: (project: ResearchProject, stepIndex: number) => Array<{ icon: string; task: string; urgent: boolean }>;
+  addRecord: (record: Partial<Record>) => void;
+  updateRecord: (recordId: string, updates: Partial<Record>) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -396,6 +398,36 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     setSelectedTheme(null);
   };
 
+  // 記録関連のメソッド
+  const addRecord = (record: Partial<Record>) => {
+    const newRecord: Record = {
+      id: `record-${Date.now()}`,
+      projectId: record.projectId || '',
+      stepId: record.stepId,
+      recordType: record.recordType || 'note',
+      title: record.title || '',
+      content: record.content || '',
+      data: record.data || {},
+      recordDate: record.recordDate || new Date().toISOString(),
+      weatherInfo: record.weatherInfo,
+      locationInfo: record.locationInfo,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    setRecords(prev => [newRecord, ...prev]);
+  };
+
+  const updateRecord = (recordId: string, updates: Partial<Record>) => {
+    setRecords(prev =>
+      prev.map(record =>
+        record.id === recordId
+          ? { ...record, ...updates, updatedAt: new Date().toISOString() }
+          : record
+      )
+    );
+  };
+
   const value: AppContextType = {
     authState,
     authError,
@@ -417,7 +449,9 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     setSelectedProject,
     handleUpdateProjectProgress,
     handleThemeDecision,
-    generateTasksForProject
+    generateTasksForProject,
+    addRecord,
+    updateRecord
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

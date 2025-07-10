@@ -275,20 +275,49 @@ const ActiveProjectPageWrapper: React.FC = () => {
 
 const RecordCalendarPageWrapper: React.FC = () => {
   const navigate = useNavigate();
-  const { activeProjects, records, schedules } = useApp();
+  const { activeProjects, records, schedules, addRecord } = useApp();
 
   const handleBack = () => {
     navigate('/dashboard');
   };
 
   const handleAddRecord = (record: Partial<Record>) => {
-    // TODO: 記録追加のロジックを実装
-    console.log('Add record:', record);
+    // AppContextの addRecord メソッドを使用して記録を追加
+    addRecord(record);
+
+    // 成功メッセージを表示（将来的にはtoast通知などで置き換え）
+    console.log('記録が正常に追加されました:', {
+      title: record.title,
+      type: record.recordType,
+      date: new Date(record.recordDate || '').toLocaleDateString('ja-JP')
+    });
   };
 
   const handleViewRecord = (record: Record) => {
-    // TODO: 記録詳細表示のロジックを実装
-    console.log('View record:', record);
+    // 記録詳細を表示（将来的にはモーダルや詳細ページで表示）
+    const recordDetails = {
+      id: record.id,
+      title: record.title,
+      type: record.recordType,
+      content: record.content,
+      date: new Date(record.recordDate).toLocaleDateString('ja-JP', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        weekday: 'long'
+      }),
+      time: new Date(record.recordDate).toLocaleTimeString('ja-JP', {
+        hour: '2-digit',
+        minute: '2-digit'
+      }),
+      projectId: record.projectId,
+      data: record.data
+    };
+
+    console.log('記録詳細:', recordDetails);
+
+    // 将来的にはここで詳細表示モーダルを開く
+    // 例: setSelectedRecord(record); setShowRecordDetailModal(true);
   };
 
   return (
