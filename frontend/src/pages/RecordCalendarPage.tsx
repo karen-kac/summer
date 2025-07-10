@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Record, ResearchProject, Schedule } from '../types';
 import '../styles/RecordCalendar.css';
 import '../styles/Common.css';
@@ -83,7 +83,7 @@ const RecordCalendarPage: React.FC<RecordCalendarPageProps> = ({
     return days;
   };
 
-  const calendarDays = generateCalendarDays();
+  const calendarDays = useMemo(() => generateCalendarDays(), [currentDate, records, schedules]);
 
   // 前月・次月の移動
   const navigateMonth = (direction: 'prev' | 'next') => {
