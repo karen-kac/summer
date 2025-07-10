@@ -34,6 +34,7 @@
   justify-content: center;
   gap: 60px;
   margin-bottom: 40px;
+  flex-direction: row;
 }
 
 .image-section {
@@ -44,8 +45,8 @@
 }
 
 .main-image {
-  width: 500px;
-  height: 500px;
+  width: 400px;
+  height: 400px;
   object-fit: contain;
   animation: bounce 2s infinite ease-in-out;
   filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.2));
@@ -54,9 +55,11 @@
 .content-section {
   flex: 1;
   text-align: left;
-  display: flex;
-  flex-direction: column;
+  display: flex !important;
+  flex-direction: column !important;
   align-items: flex-start;
+  justify-content: center;
+  width: 100%;
 }
 
 .splash-title {
@@ -68,13 +71,18 @@
   text-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   line-height: 1.1;
   letter-spacing: 0.05em;
+  display: block !important;
+  margin-bottom: 20px;
+  width: 100%;
 }
 
 .title-line {
-  display: block;
+  display: block !important;
   animation: fadeInScale 1.5s ease-out forwards;
   opacity: 0;
   transform: scale(0.8);
+  width: 100%;
+  margin-bottom: 5px;
 }
 
 .title-line:first-child {
@@ -93,13 +101,15 @@
   font-size: 1.3rem;
   color: #2E7D32;
   margin-bottom: 0;
-  margin-top: 20px;
+  margin-top: 0;
   font-weight: 700;
   font-family: 'Noto Sans JP', 'Hiragino Kaku Gothic ProN', 'ヒラギノ角ゴ ProN W3', 'メイリオ', 'Meiryo', 'MS PGothic', sans-serif;
   animation: fadeInUp 1s ease-out 0.9s both;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   letter-spacing: 0.03em;
   text-align: left;
+  display: block !important;
+  width: 100%;
 }
 
 .splash-background {
@@ -184,11 +194,13 @@
 
   .splash-title {
     font-size: 2.5rem;
+    white-space: normal;
   }
 
   .splash-subtitle {
     font-size: 1.1rem;
     text-align: center;
+    white-space: normal;
   }
 }
 
@@ -208,10 +220,12 @@
 
   .splash-title {
     font-size: 2rem;
+    white-space: normal;
   }
 
   .splash-subtitle {
     font-size: 1rem;
     margin-top: 15px;
+    white-space: normal;
   }
 }
