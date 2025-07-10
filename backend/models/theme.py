@@ -30,3 +30,14 @@ class ResearchTheme(BaseModel):
 
 class ThemeListResponse(BaseModel):
     themes: List[ResearchTheme]
+
+
+class SaveThemeRequest(BaseModel):
+    theme: ResearchTheme
+    user_profile: Optional[UserProfile] = None
+
+
+class SaveThemeResponse(BaseModel):
+    success: bool
+    message: str
+    saved_theme_id: str

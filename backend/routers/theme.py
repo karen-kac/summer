@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from models.theme import UserProfile, ResearchTheme, ThemeListResponse
+from models.theme import UserProfile, ResearchTheme, ThemeListResponse, SaveThemeRequest, SaveThemeResponse
 from services.theme_service import ThemeService
 from repositories import ThemeRepository, GeminiClient
 from utils import PromptBuilder
@@ -37,3 +37,25 @@ async def generate_theme(profile: UserProfile):
     print("=" * 50)
 
     return themes
+
+
+@router.post("/save", response_model=SaveThemeResponse)
+async def save_theme(request: SaveThemeRequest):
+    """
+    選択されたテーマを保存する
+    """
+    print("=" * 50)
+    print("💾 フロントエンドからテーマ保存リクエストを受信")
+    print(f"📚 テーマ: {request.theme.title}")
+    print(f"🆔 テーマID: {request.theme.id}")
+    print("=" * 50)
+
+    response = await theme_service.save_theme(request)
+
+    if response.success:
+        print("✅ テーマ保存完了！")
+    else:
+        print(f"❌ テーマ保存失敗: {response.message}")
+    print("=" * 50)
+
+    return response

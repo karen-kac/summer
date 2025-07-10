@@ -8,6 +8,17 @@ export interface ThemeListResponse {
   themes: ResearchTheme[];
 }
 
+export interface SaveThemeResponse {
+  success: boolean;
+  message: string;
+  saved_theme_id: string;
+}
+
+export interface SaveThemeRequest {
+  theme: ResearchTheme;
+  user_profile?: UserProfile;
+}
+
 // APIエラー型
 export class ApiError extends Error {
   constructor(
@@ -87,6 +98,17 @@ class ThemeApi {
    */
   async generateThemes(profile: UserProfile): Promise<ThemeListResponse> {
     return this.client.post<ThemeListResponse>('/theme/generate', profile);
+  }
+
+  /**
+   * 選択されたテーマを保存する
+   */
+  async saveTheme(theme: ResearchTheme, userProfile?: UserProfile): Promise<SaveThemeResponse> {
+    const request: SaveThemeRequest = {
+      theme,
+      user_profile: userProfile
+    };
+    return this.client.post<SaveThemeResponse>('/theme/save', request);
   }
 }
 

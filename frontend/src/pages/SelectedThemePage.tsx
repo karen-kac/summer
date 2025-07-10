@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ResearchTheme } from '../types';
+import { themeApi } from '../services/api';
 import '../styles/Common.css';
 import '../styles/SelectedTheme.css';
 
@@ -16,6 +17,39 @@ const SelectedThemePage: React.FC<SelectedThemePageProps> = ({
   onBackToSelector,
   onThemeDecision
 }) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [messageType, setMessageType] = useState<'success' | 'error' | null>(null);
+
+  const handleThemeDecision = async () => {
+    setIsLoading(true);
+    setMessage(null);
+    setMessageType(null);
+
+    try {
+      const response = await themeApi.saveTheme(theme);
+
+      if (response.success) {
+        setMessage('テーマが正常に保存されました！');
+        setMessageType('success');
+
+        // 少し遅延してから次の画面に進む
+        setTimeout(() => {
+          onThemeDecision(theme);
+        }, 1500);
+      } else {
+        setMessage(`保存に失敗しました: ${response.message}`);
+        setMessageType('error');
+      }
+    } catch (error) {
+      console.error('テーマ保存エラー:', error);
+      setMessage('ネットワークエラーが発生しました。もう一度お試しください。');
+      setMessageType('error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="theme-selected">
       <div className="selected-header">
@@ -49,16 +83,29 @@ const SelectedThemePage: React.FC<SelectedThemePageProps> = ({
         </div>
       </div>
 
+      {/* メッセージ表示エリア */}
+      {message && (
+        <div className={`message ${messageType}`}>
+          <p>{message}</p>
+        </div>
+      )}
+
       <div className="selected-actions">
-        <button className="back-btn" onClick={onBackToResults}>
+        <button className="back-btn" onClick={onBackToResults} disabled={isLoading}>
           <span className="emoji">🔙</span>
           <span className="label">テーマ一覧に戻る</span>
         </button>
-        <button className="select-theme-btn" onClick={() => onThemeDecision(theme)}>
-          <span className="emoji">🎯</span>
-          <span className="label">このテーマに決定する！</span>
+        <button
+          className="select-theme-btn"
+          onClick={handleThemeDecision}
+          disabled={isLoading}
+        >
+          <span className="emoji">{isLoading ? '⏳' : '🎯'}</span>
+          <span className="label">
+            {isLoading ? '保存中...' : 'このテーマに決定する！'}
+          </span>
         </button>
-        <button className="back-btn" onClick={onBackToSelector}>
+        <button className="back-btn" onClick={onBackToSelector} disabled={isLoading}>
           <span className="emoji">🔄</span>
           <span className="label">最初から選び直す</span>
         </button>
