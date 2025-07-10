@@ -24,7 +24,7 @@ import RecordCalendarPage from './pages/RecordCalendarPage';
 
 import { generateMockThemes } from './utils/mockThemeGenerator';
 import { mockUserStats, mockRecentAchievements } from './utils/mockData';
-import { Record } from './types';
+import type { Record, UserProfile, ResearchProject, ResearchTheme, UserStats, Achievement } from './types';
 import './styles/Common.css';
 
 // ページコンポーネントをラップしてReact Router対応にする
