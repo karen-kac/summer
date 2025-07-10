@@ -22,7 +22,6 @@ import SelectedThemePage from './pages/SelectedThemePage';
 import ActiveProjectPage from './pages/ActiveProjectPage';
 import RecordCalendarPage from './pages/RecordCalendarPage';
 
-import { generateMockThemes } from './utils/mockThemeGenerator';
 import { mockUserStats, mockRecentAchievements } from './utils/mockData';
 import type { Record, UserProfile, ResearchProject, ResearchTheme, UserStats, Achievement } from './types';
 import './styles/Common.css';
@@ -150,13 +149,17 @@ const DashboardPageWrapper: React.FC = () => {
 
 const ThemeSelectorPageWrapper: React.FC = () => {
   const navigate = useNavigate();
-  const { setUserProfile, setGeneratedThemes } = useApp();
+  const { setUserProfile, generateThemesFromAPI, themeGenerationLoading, themeGenerationError, generatedThemes } = useApp();
 
-  const handleProfileComplete = (profile: any) => {
+  const handleProfileComplete = async (profile: any) => {
     setUserProfile(profile);
-    const themes = generateMockThemes(profile);
-    setGeneratedThemes(themes);
-    navigate('/results');
+    await generateThemesFromAPI(profile, false); // モックAPIを使用
+
+    // テーマ生成が成功した場合のみ結果ページに遷移
+    // エラーがない場合でも、テーマが空の場合は遷移しない
+    if (!themeGenerationError && generatedThemes.length > 0) {
+      navigate('/results');
+    }
   };
 
   const handleBack = () => {
@@ -167,6 +170,8 @@ const ThemeSelectorPageWrapper: React.FC = () => {
     <ThemeSelectorPage
       onProfileComplete={handleProfileComplete}
       onBack={handleBack}
+      isLoading={themeGenerationLoading}
+      error={themeGenerationError}
     />
   );
 };
