@@ -89,18 +89,22 @@
 }
 
 .content-section {
-  display: grid;
-  grid-template-columns: 1fr 2fr;
-  gap: 30px;
-  margin-top: 20px;
+  display: flex !important;
+  flex-direction: row !important;
+  gap: 30px !important;
+  margin-top: 20px !important;
+  width: 100% !important;
+  align-items: flex-start !important;
 }
 
 .steps-timeline {
+  flex: 1 !important;
   background: white;
   padding: 25px;
   border-radius: 15px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  height: fit-content;
+  height: fit-content !important;
+  min-width: 300px !important;
 }
 
 .steps-timeline h2 {
@@ -164,6 +168,7 @@
 }
 
 .current-step-detail {
+  flex: 2 !important;
   background: white;
   border-radius: 15px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
@@ -302,8 +307,13 @@
 /* レスポンシブデザイン */
 @media (max-width: 768px) {
   .content-section {
-    grid-template-columns: 1fr;
-    gap: 20px;
+    flex-direction: column !important;
+    gap: 20px !important;
+  }
+
+  .steps-timeline, .current-step-detail {
+    flex: none !important;
+    min-width: auto !important;
   }
 
   .project-header {
