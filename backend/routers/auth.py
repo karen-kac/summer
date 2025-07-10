@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException
 from backend.models.user import UserCreate, UserLogin
 from backend.services.user_service import create_user, authenticate_user
 

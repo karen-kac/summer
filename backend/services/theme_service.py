@@ -1,11 +1,14 @@
 import sqlite3
-from backend.models.user import UserCreate
+import bcrypt
 from pathlib import Path
+from backend.models.user import UserCreate
 
-DATABASE = Path(__file__).resolve().parent.parent / "users.db"
+DATABASE = Path(__file__).resolve().parent.parent / "database" / "users.db"
 
 def create_user(user: UserCreate) -> bool:
     try:
+        hashed_password = bcrypt.hashpw(user.password.encode(), bcrypt.gensalt()).decode()
+
         with sqlite3.connect(DATABASE) as conn:
             cursor = conn.cursor()
             cursor.execute('''
@@ -20,7 +23,7 @@ def create_user(user: UserCreate) -> bool:
             cursor.execute('''
                 INSERT INTO users (last_name, first_name, email, password)
                 VALUES (?, ?, ?, ?)
-            ''', (user.last_name, user.first_name, user.email, user.password))
+            ''', (user.last_name, user.first_name, user.email, hashed_password))
             conn.commit()
             return True
     except sqlite3.IntegrityError:
@@ -29,9 +32,9 @@ def create_user(user: UserCreate) -> bool:
 def authenticate_user(email: str, password: str):
     with sqlite3.connect(DATABASE) as conn:
         cursor = conn.cursor()
-        cursor.execute('SELECT * FROM users WHERE email = ? AND password = ?', (email, password))
+        cursor.execute('SELECT * FROM users WHERE email = ?', (email,))
         row = cursor.fetchone()
-        if row:
+        if row and bcrypt.checkpw(password.encode(), row[4].encode()):
             class User: pass
             user = User()
             user.first_name = row[2]

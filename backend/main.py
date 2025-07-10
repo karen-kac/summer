@@ -1,42 +1,37 @@
-# backend/main.py
-
-import os
-from flask import Flask, jsonify
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
-from flask_cors import CORS # CORSを有効にするためにインポート
-from routers import auth
+import os
 
-app.include_router(auth.router)
-
-
-# ルーターをインポート
-from backend.routers.auth import auth_bp
-# 他のルーターもここにインポートします (例: from backend.routers.theme import theme_bp)
-
-# .env ファイルから環境変数をロード
+# 環境変数の読み込み
 load_dotenv()
 
-app = Flask(__name__)
+# アプリケーションの初期化
+app = FastAPI(
+    title="Summer Research AI Backend",
+    description="研究支援ツールのバックエンドAPI（FastAPI）",
+    version="0.1.0"
+)
 
-# CORS設定
-# 開発用。本番環境では許可するオリジンを厳密に指定してください。
-# 例: CORS(app, resources={r"/api/*": {"origins": "http://localhost:3000"}})
-CORS(app)
+# CORS設定（フロントエンドとの連携のため）
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-# ルーターを登録
-app.register_blueprint(auth_bp, url_prefix='/api/auth')
-# 他のルーターもここに登録します (例: app.register_blueprint(theme_bp, url_prefix='/api/theme'))
+# 認証ルーターを登録
+from backend.routers import auth
+app.include_router(auth.router, prefix="/api/auth", tags=["認証"])
 
-@app.route('/')
-def index():
-    """
-    ルートパスのテストエンドポイント
-    """
-    return jsonify({"message": "Summer Research AI Backend is running!"})
+# 起動確認用ルート
+@app.get("/", tags=["起動確認"])
+async def root():
+    return {"message": "Summer Research AI Backend is running with FastAPI!"}
 
-if __name__ == '__main__':
-    # 開発サーバーの起動
-    # FLASK_ENV=development を設定するとデバッグモードが有効になります
-    # app.run(debug=True, port=5000)
-    app.run(debug=True, host='0.0.0.0', port=5000)
-
+# 直接実行用（Pythonから）
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("backend.main:app", host="0.0.0.0", port=8000, reload=True)

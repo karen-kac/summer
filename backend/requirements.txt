@@ -14,3 +14,7 @@ uvicorn==0.35.0
 Flask
 python-dotenv
 Flask-Cors # CORSを有効にする場合
+fastapi
+uvicorn
+bcrypt
+python-dotenv

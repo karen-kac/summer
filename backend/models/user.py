@@ -1,10 +1,10 @@
-from pydantic import BaseModel, EmailStr, constr
+from pydantic import BaseModel, EmailStr
 
 class UserCreate(BaseModel):
     last_name: str
     first_name: str
     email: EmailStr
-    password: constr(min_length=8)
+    password: str
 
 class UserLogin(BaseModel):
     email: EmailStr

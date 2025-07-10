@@ -8,10 +8,10 @@ export const register = async (data: {
   email: string;
   password: string;
 }) => {
-  return axios.post(`${API_URL}/register`, data);
+  return axios.post(`${API_URL}/api/auth/register`, data);
 };
 
 export const login = async (email: string, password: string) => {
-  const response = await axios.post(`${API_URL}/login`, { email, password });
+  const response = await axios.post(`${API_URL}/api/auth/login`, { email, password });
   return response.data;
 };

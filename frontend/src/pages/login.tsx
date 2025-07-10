@@ -10,7 +10,7 @@ export default function Login() {
     e.preventDefault();
     try {
       const res = await login(email, password);
-      localStorage.setItem("user", res.first_name); // 仮のセッション
+      localStorage.setItem("user", res.first_name); // 仮のセッション保存
       window.location.href = "/";
     } catch (err: any) {
       setError(err.response?.data?.detail || "ログインに失敗しました");
