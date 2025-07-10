@@ -88,23 +88,25 @@
   transition: width 0.3s ease;
 }
 
-.active-project-content {
-  display: flex !important;
-  flex-direction: row !important;
-  gap: 30px !important;
-  margin-top: 20px !important;
-  width: 100% !important;
-  align-items: flex-start !important;
+/* ActiveProjectページ専用のコンテンツレイアウト */
+.page-container .active-project-content {
+  display: flex;
+  flex-direction: row;
+  gap: 30px;
+  margin-top: 20px;
+  width: 100%;
+  align-items: flex-start;
 }
 
-.steps-timeline {
-  flex: 1 !important;
+/* タイムラインセクション */
+.page-container .active-project-content .steps-timeline {
+  flex: 1;
   background: white;
   padding: 25px;
   border-radius: 15px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  height: fit-content !important;
-  min-width: 300px !important;
+  height: fit-content;
+  min-width: 300px;
 }
 
 .steps-timeline h2 {
@@ -167,8 +169,9 @@
   color: #666;
 }
 
-.current-step-detail {
-  flex: 2 !important;
+/* 現在のステップの詳細セクション */
+.page-container .active-project-content .current-step-detail {
+  flex: 2;
   background: white;
   border-radius: 15px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
@@ -306,14 +309,15 @@
 
 /* レスポンシブデザイン */
 @media (max-width: 768px) {
-  .active-project-content {
-    flex-direction: column !important;
-    gap: 20px !important;
+  .page-container .active-project-content {
+    flex-direction: column;
+    gap: 20px;
   }
 
-  .steps-timeline, .current-step-detail {
-    flex: none !important;
-    min-width: auto !important;
+  .page-container .active-project-content .steps-timeline,
+  .page-container .active-project-content .current-step-detail {
+    flex: none;
+    min-width: auto;
   }
 
   .project-header {

@@ -148,9 +148,9 @@ const RecordCalendarPage: React.FC<RecordCalendarPageProps> = ({
 
         {/* カレンダーグリッド */}
         <div className="calendar-grid">
-          {calendarDays.map((day, index) => (
-            <div
-              key={index}
+                  {calendarDays.map((day) => (
+          <div
+            key={day.date.toISOString()}
               className={`calendar-day ${!day.isCurrentMonth ? 'other-month' : ''} ${
                 day.hasActions ? 'has-actions' : ''
               } ${day.hasObservations ? 'has-observations' : ''} ${
