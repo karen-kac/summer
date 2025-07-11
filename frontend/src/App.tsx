@@ -21,6 +21,7 @@ import ThemeResultsPage from './pages/ThemeResultsPage';
 import SelectedThemePage from './pages/SelectedThemePage';
 import ActiveProjectPage from './pages/ActiveProjectPage';
 import RecordCalendarPage from './pages/RecordCalendarPage';
+import UsagePage from './pages/UsagePage';
 
 import type { Record, UserProfile, ResearchProject, ResearchTheme, UserStats, Achievement } from './types';
 import './styles/Common.css';
@@ -131,8 +132,7 @@ const DashboardPageWrapper: React.FC = () => {
   };
 
   const handleOpenAITutor = () => {
-    console.log('Open AI tutor');
-    // TODO: AIチューター画面に遷移
+    navigate('/usage');
   };
 
   const handleViewRecords = () => {
@@ -366,6 +366,18 @@ const RecordCalendarPageWrapper: React.FC = () => {
   );
 };
 
+const UsagePageWrapper: React.FC = () => {
+  const navigate = useNavigate();
+
+  const handleBackToDashboard = () => {
+    navigate('/dashboard');
+  };
+
+  return (
+    <UsagePage onBackToDashboard={handleBackToDashboard} />
+  );
+};
+
 // ルーターの設定
 const router = createBrowserRouter([
   {
@@ -411,6 +423,10 @@ const router = createBrowserRouter([
       {
         path: 'records',
         element: <RecordCalendarPageWrapper />,
+      },
+      {
+        path: 'usage',
+        element: <UsagePageWrapper />,
       },
     ],
   },
