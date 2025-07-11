@@ -1,4 +1,4 @@
-import { UserProfile, ResearchTheme, GeneratePlanRequest, GeneratePlanResponse, GetSavedThemeResponse, GetResearchPlanResponse } from '../types';
+import { UserProfile, ResearchTheme, GeneratePlanRequest, GeneratePlanResponse, GetSavedThemeResponse, GetResearchPlanResponse, ResearchProject, Achievement } from '../types';
 
 // APIの基本設定
 const API_BASE_URL = 'http://127.0.0.1:8000';
@@ -17,6 +17,12 @@ export interface SaveThemeResponse {
 export interface SaveThemeRequest {
   theme: ResearchTheme;
   user_profile?: UserProfile;
+}
+
+export interface DashboardResponse {
+  activeProjects: ResearchProject[];
+  pastProjects: ResearchProject[];
+  recentAchievements: Achievement[];
 }
 
 // APIエラー型
@@ -140,7 +146,19 @@ class ThemeApi {
 const apiClient = new ApiClient();
 export const themeApi = new ThemeApi(apiClient);
 
+// ダッシュボードAPI
+class DashboardApi {
+  constructor(private client: ApiClient) {}
+
+  async getDashboardData(): Promise<DashboardResponse> {
+    return this.client.get<DashboardResponse>('/dashboard/get');
+  }
+}
+
+export const dashboardApi = new DashboardApi(apiClient);
+
 // デフォルトエクスポート
 export default {
   theme: themeApi,
+  dashboard: dashboardApi,
 };
