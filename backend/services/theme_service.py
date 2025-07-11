@@ -22,12 +22,11 @@ class ThemeService:
         選択されたテーマを保存する
         """
         try:
-            # 保存データを作成
+            # 保存データを作成（theme_idの重複を削除）
             saved_data = {
                 "theme": request.theme.model_dump(),
                 "user_profile": request.user_profile.model_dump() if request.user_profile else None,
-                "saved_at": datetime.now().isoformat(),
-                "theme_id": request.theme.id
+                "saved_at": datetime.now().isoformat()
             }
 
             # 既存の保存データを読み込み
@@ -72,10 +71,10 @@ class ThemeService:
             with open(self.saved_themes_file, 'r', encoding='utf-8') as f:
                 saved_themes = json.load(f)
 
-            # 指定されたテーマIDを検索
+            # 指定されたテーマIDを検索（theme.idで検索）
             for saved_data in saved_themes:
-                if saved_data.get("theme_id") == theme_id:
-                    theme_data = saved_data["theme"]
+                theme_data = saved_data["theme"]
+                if theme_data.get("id") == theme_id:
                     theme = ResearchTheme(**theme_data)
 
                     user_profile = None
@@ -120,10 +119,10 @@ class ThemeService:
             with open(self.saved_plans_file, 'r', encoding='utf-8') as f:
                 saved_plans = json.load(f)
 
-            # 指定されたテーマIDを検索
+            # 指定されたテーマIDを検索（plan.theme_idで検索）
             for saved_data in saved_plans:
-                if saved_data.get("theme_id") == theme_id:
-                    plan_data = saved_data["plan"]
+                plan_data = saved_data["plan"]
+                if plan_data.get("theme_id") == theme_id:
 
                     # ResearchStepオブジェクトのリストを作成
                     steps = []
@@ -165,12 +164,11 @@ class ThemeService:
 
     async def save_research_plan(self, plan: ResearchPlan) -> bool:
         """
-        研究計画を保存する
+        研究計画を保存する（theme_idの重複を削除）
         """
         try:
-            # 保存データを作成
+            # 保存データを作成（トップレベルのtheme_idを削除）
             saved_data = {
-                "theme_id": plan.theme_id,
                 "plan": plan.model_dump(),
                 "created_at": datetime.now().isoformat()
             }
@@ -182,7 +180,7 @@ class ThemeService:
                     saved_plans = json.load(f)
 
             # 既存の同じテーマの計画があれば削除
-            saved_plans = [p for p in saved_plans if p.get("theme_id") != plan.theme_id]
+            saved_plans = [p for p in saved_plans if p.get("plan", {}).get("theme_id") != plan.theme_id]
 
             # 新しい計画を追加
             saved_plans.append(saved_data)

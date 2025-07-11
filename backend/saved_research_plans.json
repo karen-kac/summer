@@ -1,6 +1,5 @@
 [
   {
-    "theme_id": "theme_87396651-d4a1-4c59-8eda-21d59e565156",
     "plan": {
       "theme_id": "theme_87396651-d4a1-4c59-8eda-21d59e565156",
       "theme_title": "水の浄化方法に関する研究",
@@ -90,7 +89,6 @@
     "created_at": "2025-07-11T09:08:39.262730"
   },
   {
-    "theme_id": "theme_08218d9a-d111-43bf-aa9d-97a4e9717784",
     "plan": {
       "theme_id": "theme_08218d9a-d111-43bf-aa9d-97a4e9717784",
       "theme_title": "自作プログラミング言語による簡単な計算機アプリ開発",
