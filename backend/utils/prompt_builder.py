@@ -75,13 +75,6 @@ class PromptBuilder:
         strengths = [self.strength_labels.get(s, s) for s in profile.strengths]
         duration = self.duration_labels.get(profile.duration, profile.duration)
 
-        print(f"🔧 プロンプト構築中...")
-        print(f"   学年: {grade}")
-        print(f"   興味: {interests}")
-        print(f"   性格: {personality}")
-        print(f"   得意: {strengths}")
-        print(f"   期間: {duration}")
-
         prompt = (
             f"あなたは自由研究の研究テーマを提案する専門家です。\n\n"
             f"以下の子供のプロフィールに基づいて、その子に最適な自由研究テーマを3つ提案してください：\n"
@@ -136,8 +129,6 @@ class PromptBuilder:
 ```"""
         )
 
-        print(f"📝 生成されたプロンプト:")
-        print(f"   長さ: {len(prompt)}文字")
         return prompt
 
     def build_research_plan_prompt(self, theme: ResearchTheme, user_profile: UserProfile = None):
@@ -151,12 +142,6 @@ class PromptBuilder:
         if user_profile:
             grade = self.grade_labels.get(user_profile.grade, user_profile.grade)
             grade_info = f"学年: {grade}\n"
-
-        print(f"🔧 研究計画プロンプト構築中...")
-        print(f"   テーマ: {theme.title}")
-        print(f"   ジャンル: {genre_label}")
-        print(f"   推定日数: {theme.estimated_days}日")
-        print(f"   難易度: {theme.difficulty}")
 
         prompt = (
             f"あなたは自由研究の学習指導専門家です。\n\n"
@@ -210,6 +195,4 @@ class PromptBuilder:
 上記のようなJSON形式で、5-7個のステップを作成してください。"""
         )
 
-        print(f"📝 生成された研究計画プロンプト:")
-        print(f"   長さ: {len(prompt)}文字")
         return prompt

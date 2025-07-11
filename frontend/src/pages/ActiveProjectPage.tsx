@@ -256,41 +256,32 @@ const ActiveProjectPage: React.FC<ActiveProjectPageProps> = ({
     setPlanError(null);
 
     try {
-      console.log('研究計画を取得中...', themeId);
-
       // まず既存の研究計画を取得を試行
       const existingPlanResponse = await themeApi.getResearchPlan(themeId);
 
       if (existingPlanResponse.success && existingPlanResponse.plan) {
-        console.log('既存の研究計画を取得:', existingPlanResponse.plan);
         const aiSteps = convertAIStepsToTemplate(existingPlanResponse.plan.steps);
         setProjectSteps(aiSteps);
         setIsUsingAIPlan(true);
         setPlanStatus('cached');
-        console.log('既存の研究計画を使用');
         return;
       }
 
       // 既存の研究計画がない場合、新しく生成
-      console.log('既存の研究計画が見つからないため、新規生成します');
       const generateResponse = await themeApi.generateResearchPlan(themeId);
 
       if (generateResponse.success && generateResponse.plan) {
-        console.log('新しい研究計画を生成:', generateResponse.plan);
         const aiSteps = convertAIStepsToTemplate(generateResponse.plan.steps);
         setProjectSteps(aiSteps);
         setIsUsingAIPlan(true);
         setPlanStatus('generated');
-        console.log('新しい研究計画を生成・保存しました');
       } else {
-        console.warn('研究計画の生成に失敗、デフォルトプランを使用:', generateResponse.message);
         const defaultSteps = getDefaultStepTemplates(project.genre || 'experiment');
         setProjectSteps(defaultSteps);
         setIsUsingAIPlan(false);
         setPlanStatus('default');
       }
     } catch (error) {
-      console.error('研究計画の取得・生成エラー:', error);
       setPlanError('研究計画の取得に失敗しました。デフォルトプランを使用します。');
       const defaultSteps = getDefaultStepTemplates(project.genre || 'experiment');
       setProjectSteps(defaultSteps);
@@ -302,14 +293,10 @@ const ActiveProjectPage: React.FC<ActiveProjectPageProps> = ({
   };
 
   useEffect(() => {
-    console.log('ActiveProjectPage: プロジェクト情報:', project);
-
     // プロジェクトにthemeIdがある場合、研究計画を取得
     if (project.themeId) {
-      console.log('テーマID検出、研究計画を取得します:', project.themeId);
       loadResearchPlan(project.themeId);
     } else {
-      console.log('テーマIDが見つかりません、デフォルトプランを使用します');
       const defaultSteps = getDefaultStepTemplates(project.genre || 'experiment');
       setProjectSteps(defaultSteps);
       setIsUsingAIPlan(false);

@@ -38,8 +38,6 @@ class GeminiClient:
                 }
             )
 
-            print(f"✅ Gemini API初期化成功: gemini-1.5-flash")
-
         except ValueError as e:
             raise RuntimeError(str(e))
         except Exception as e:
@@ -59,20 +57,15 @@ class GeminiClient:
         Raises:
             HTTPException: API通信でエラーが発生した場合
         """
-        print(f"🚀 Gemini APIへプロンプトを送信中...")
-        print(f"📝 プロンプト概要: {prompt[:100]}...")
-
         try:
             response = await self.model.generate_content_async(prompt)
 
             if not response.text:
                 raise ValueError("Gemini APIから空の応答が返されました")
 
-            print(f"✅ Gemini API応答受信: {len(response.text)}文字")
             return response.text
 
         except Exception as e:
-            print(f"❌ Gemini API呼び出しエラー: {e}")
             raise HTTPException(
                 status_code=500,
                 detail=f"Gemini APIとの通信中にエラーが発生しました: {e}"
@@ -94,7 +87,6 @@ class GeminiClient:
         try:
             # Gemini APIから応答を取得
             raw_response = await self.generate_content(prompt)
-            print(f"🤖 Gemini AI生成結果:\n---\n{raw_response}\n---")
 
             # JSONブロックを抽出（```json ... ``` の部分）
             json_pattern = r'```json\s*([\s\S]*?)\s*```'
@@ -118,7 +110,6 @@ class GeminiClient:
             # JSONを解析
             try:
                 result = json.loads(json_string)
-                print(f"✅ JSON解析成功: {type(result)}, 件数: {len(result) if isinstance(result, list) else 'N/A'}")
 
                 # リスト形式の場合はそのまま返す
                 if isinstance(result, list):
@@ -130,7 +121,6 @@ class GeminiClient:
                         return result['themes']
                     # 研究計画生成の場合：辞書形式をそのまま返す
                     elif 'steps' in result:
-                        print(f"研究計画形式を検出: {len(result.get('steps', []))}ステップ")
                         return result
                     # その他の単一オブジェクトの場合はリストにラップ
                     else:
@@ -139,9 +129,6 @@ class GeminiClient:
                     raise ValueError(f"予期しないJSON形式: {type(result)}")
 
             except json.JSONDecodeError as e:
-                print(f"❌ JSON解析エラー:")
-                print(f"エラー詳細: {e}")
-                print(f"解析対象: {json_string[:200]}...")
                 raise HTTPException(
                     status_code=500,
                     detail=f"AI応答のJSON解析に失敗しました: {e}\n\n解析対象の一部: {json_string[:100]}..."
@@ -151,13 +138,11 @@ class GeminiClient:
             # 既にHTTPExceptionの場合はそのまま再発生
             raise
         except ValueError as e:
-            print(f"❌ 応答形式エラー: {e}")
             raise HTTPException(
                 status_code=500,
                 detail=f"AI応答の形式が不正です: {e}"
             )
         except Exception as e:
-            print(f"❌ 予期しないエラー: {e}")
             raise HTTPException(
                 status_code=500,
                 detail=f"AI処理中に予期しないエラーが発生しました: {e}"

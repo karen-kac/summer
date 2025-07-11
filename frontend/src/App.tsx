@@ -22,9 +22,21 @@ import SelectedThemePage from './pages/SelectedThemePage';
 import ActiveProjectPage from './pages/ActiveProjectPage';
 import RecordCalendarPage from './pages/RecordCalendarPage';
 
-import { mockUserStats, mockRecentAchievements } from './utils/mockData';
 import type { Record, UserProfile, ResearchProject, ResearchTheme, UserStats, Achievement } from './types';
 import './styles/Common.css';
+
+// デフォルトデータ
+const defaultUserStats: UserStats = {
+  totalPoints: 0,
+  level: 1,
+  completedProjects: 0,
+  currentStreak: 0,
+  totalRecords: 0,
+  totalPhotos: 0,
+  totalExperiments: 0
+};
+
+const defaultRecentAchievements: Achievement[] = [];
 
 // ページコンポーネントをラップしてReact Router対応にする
 const SplashScreenWrapper: React.FC = () => {
@@ -98,7 +110,10 @@ const DashboardPageWrapper: React.FC = () => {
     activeProjects,
     pastProjects,
     todaysTasks,
-    setSelectedProject
+    savedThemes,
+    savedThemesLoading,
+    setSelectedProject,
+    setSelectedTheme
   } = useApp();
 
   const handleStartNewResearch = () => {
@@ -129,20 +144,29 @@ const DashboardPageWrapper: React.FC = () => {
     // TODO: 学習コンテンツ画面に遷移
   };
 
+  const handleSelectSavedTheme = (theme: ResearchTheme) => {
+    // 保存済みテーマを選択して、ActiveProjectPageに遷移
+    setSelectedTheme(theme);
+    navigate(`/theme/${theme.id}`);
+  };
+
   return (
     <DashboardPage
       userProfile={userProfile}
       activeProjects={activeProjects}
       pastProjects={pastProjects}
-      userStats={mockUserStats}
-      recentAchievements={mockRecentAchievements}
+      userStats={defaultUserStats}
+      recentAchievements={defaultRecentAchievements}
       todaysTasks={todaysTasks}
+      savedThemes={savedThemes}
+      savedThemesLoading={savedThemesLoading}
       onStartNewResearch={handleStartNewResearch}
       onContinueProject={handleContinueProject}
       onViewAllProjects={handleViewAllProjects}
       onOpenAITutor={handleOpenAITutor}
       onViewRecords={handleViewRecords}
       onViewLearning={handleViewLearning}
+      onSelectSavedTheme={handleSelectSavedTheme}
     />
   );
 };

@@ -194,7 +194,6 @@ class ThemeService:
             return True
 
         except Exception as e:
-            print(f"研究計画の保存エラー: {str(e)}")
             return False
 
     async def generate_research_plan(self, request: GeneratePlanRequest) -> GeneratePlanResponse:
@@ -205,7 +204,6 @@ class ThemeService:
             # まず既存の研究計画があるかチェック
             existing_plan_response = await self.get_saved_research_plan(request.theme_id)
             if existing_plan_response.success:
-                print(f"既存の研究計画を使用: {request.theme_id}")
                 return GeneratePlanResponse(
                     success=True,
                     message="保存された研究計画が見つかりました",
@@ -224,59 +222,34 @@ class ThemeService:
             theme = saved_theme_response.theme
             user_profile = saved_theme_response.user_profile
 
-            print(f"新しい研究計画を生成中: {request.theme_id}")
             # AI を使って研究計画を生成
             plan_data = await self.repository.generate_research_plan(theme, user_profile)
 
-            print(f"🔍 AI応答データの詳細:")
-            print(f"   型: {type(plan_data)}")
-            print(f"   内容: {str(plan_data)[:500]}...")
-
             # AIからの応答がリスト形式か辞書形式かを判定
             if isinstance(plan_data, list):
-                # リスト形式の場合、直接ステップとして扱う
                 steps_data = plan_data
-                print(f"✅ リスト形式の応答を受信: {len(steps_data)}ステップ")
             elif isinstance(plan_data, dict):
-                # 辞書形式の場合、stepsキーから取得
                 steps_data = plan_data.get("steps", [])
-                print(f"✅ 辞書形式の応答を受信: {len(steps_data)}ステップ")
-                print(f"   辞書のキー: {list(plan_data.keys())}")
             else:
                 raise ValueError(f"予期しない応答形式: {type(plan_data)}")
-
-            print(f"🔍 ステップデータの詳細:")
-            for i, step_data in enumerate(steps_data[:2]):  # 最初の2つだけログ出力
-                print(f"   ステップ {i}: {step_data}")
 
             # ResearchStepオブジェクトのリストを作成
             steps = []
             for i, step_data in enumerate(steps_data):
-                print(f"🔧 ステップ {i} を処理中...")
-
-                # ステップデータが辞書形式でない場合はスキップ
                 if not isinstance(step_data, dict):
-                    print(f"⚠️ 警告: ステップ {i} のデータが辞書ではありません: {type(step_data)}")
                     continue
 
-                # orderフィールドがない場合は追加
                 if 'order' not in step_data:
                     step_data['order'] = i + 1
-                    print(f"   orderフィールドを追加: {i + 1}")
 
                 try:
                     step = ResearchStep(**step_data)
                     steps.append(step)
-                    print(f"✅ ステップ {i} 作成成功: {step.title}")
-                except Exception as e:
-                    print(f"❌ 警告: ステップ {i} の作成に失敗: {e}")
-                    print(f"   ステップデータ: {step_data}")
+                except Exception:
                     continue
 
             if not steps:
                 raise ValueError("有効なステップが生成されませんでした")
-
-            print(f"✅ 合計 {len(steps)} ステップを作成しました")
 
             # ResearchPlanオブジェクトを作成
             plan = ResearchPlan(
@@ -289,11 +262,7 @@ class ThemeService:
             )
 
             # 研究計画を保存
-            save_success = await self.save_research_plan(plan)
-            if save_success:
-                print(f"研究計画を保存しました: {request.theme_id}")
-            else:
-                print(f"研究計画の保存に失敗しました: {request.theme_id}")
+            await self.save_research_plan(plan)
 
             return GeneratePlanResponse(
                 success=True,
@@ -302,10 +271,6 @@ class ThemeService:
             )
 
         except Exception as e:
-            print(f"研究計画生成エラーの詳細: {str(e)}")
-            print(f"エラータイプ: {type(e)}")
-            import traceback
-            traceback.print_exc()
             return GeneratePlanResponse(
                 success=False,
                 message=f"研究計画の生成に失敗しました: {str(e)}",
