@@ -1,4 +1,4 @@
-from models.theme import UserProfile
+from models.theme import UserProfile, ResearchTheme
 
 
 class PromptBuilder:
@@ -60,6 +60,12 @@ class PromptBuilder:
             '1month': '1ヶ月',
             '2months': '2ヶ月以上',
             'flexible': '特に決まっていない'
+        }
+
+        self.genre_labels = {
+            'experiment': '実験型',
+            'observation': '観察型',
+            'research': '調査型'
         }
 
     def build_suggest_themes_prompt(self, profile: UserProfile):
@@ -132,6 +138,78 @@ class PromptBuilder:
 
         print(f"📝 生成されたプロンプト:")
         print(f"   長さ: {len(prompt)}文字")
-        print(f"   プロフィール要素: 学年, {len(interests)}個の興味, {len(personality)}個の性格, {len(strengths)}個の得意分野")
+        return prompt
 
+    def build_research_plan_prompt(self, theme: ResearchTheme, user_profile: UserProfile = None):
+        """
+        保存されたテーマを基に、詳細な研究計画を生成するプロンプトを作成する
+        """
+        genre_label = self.genre_labels.get(theme.genre, theme.genre)
+
+        # ユーザープロフィールがある場合は学年情報を追加
+        grade_info = ""
+        if user_profile:
+            grade = self.grade_labels.get(user_profile.grade, user_profile.grade)
+            grade_info = f"学年: {grade}\n"
+
+        print(f"🔧 研究計画プロンプト構築中...")
+        print(f"   テーマ: {theme.title}")
+        print(f"   ジャンル: {genre_label}")
+        print(f"   推定日数: {theme.estimated_days}日")
+        print(f"   難易度: {theme.difficulty}")
+
+        prompt = (
+            f"あなたは自由研究の学習指導専門家です。\n\n"
+            f"以下の自由研究テーマについて、子供が段階的に取り組めるよう詳細な研究計画を作成してください：\n\n"
+            f"=== 研究テーマ情報 ===\n"
+            f"テーマ: {theme.title}\n"
+            f"説明: {theme.description}\n"
+            f"ジャンル: {genre_label}（{theme.genre}）\n"
+            f"推定日数: {theme.estimated_days}日\n"
+            f"難易度: {theme.difficulty}\n"
+            f"{grade_info}"
+            f"必要な材料: {', '.join(theme.materials)}\n"
+            f"基本手順: {', '.join(theme.steps)}\n\n"
+            f"=== 作成する研究計画の要件 ===\n"
+            f"1. 子供が理解しやすい段階的なステップに分割してください\n"
+            f"2. 各ステップには具体的な作業内容と達成目標を含めてください\n"
+            f"3. 各ステップの実践的なコツやアドバイスを含めてください\n"
+            f"4. 研究の流れが自然で論理的になるよう配慮してください\n"
+            f"5. 安全性や実現可能性を考慮してください\n\n"
+            f"**重要**: 必ず以下のJSON形式で回答してください。```json ``` で囲んでください。\n"
+            f"他の説明文は一切含めず、JSONのみを返してください：\n\n"
+            f"""```json
+{{
+  "steps": [
+    {{
+      "title": "ステップ1のタイトル",
+      "description": "このステップで何をするか、なぜ重要かの詳細説明",
+      "tips": [
+        "実践的なコツ1",
+        "注意点やアドバイス2",
+        "うまくいかない場合の対処法3"
+      ],
+      "duration": "1-2日",
+      "order": 1
+    }},
+    {{
+      "title": "ステップ2のタイトル",
+      "description": "このステップの詳細説明",
+      "tips": [
+        "コツ1",
+        "コツ2",
+        "コツ3"
+      ],
+      "duration": "2-3日",
+      "order": 2
+    }}
+  ]
+}}
+```
+
+上記のようなJSON形式で、5-7個のステップを作成してください。"""
+        )
+
+        print(f"📝 生成された研究計画プロンプト:")
+        print(f"   長さ: {len(prompt)}文字")
         return prompt

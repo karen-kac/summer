@@ -1,4 +1,4 @@
-import { UserProfile, ResearchTheme } from '../types';
+import { UserProfile, ResearchTheme, GeneratePlanRequest, GeneratePlanResponse, GetSavedThemeResponse, GetResearchPlanResponse } from '../types';
 
 // APIの基本設定
 const API_BASE_URL = 'http://127.0.0.1:8000';
@@ -109,6 +109,30 @@ class ThemeApi {
       user_profile: userProfile
     };
     return this.client.post<SaveThemeResponse>('/theme/save', request);
+  }
+
+  /**
+   * 保存されたテーマを取得する
+   */
+  async getSavedTheme(themeId: string): Promise<GetSavedThemeResponse> {
+    return this.client.get<GetSavedThemeResponse>(`/theme/saved/${themeId}`);
+  }
+
+  /**
+   * 保存された研究計画を取得する
+   */
+  async getResearchPlan(themeId: string): Promise<GetResearchPlanResponse> {
+    return this.client.get<GetResearchPlanResponse>(`/theme/plan/${themeId}`);
+  }
+
+  /**
+   * 保存されたテーマを基に研究計画を生成する（初回のみ）
+   */
+  async generateResearchPlan(themeId: string): Promise<GeneratePlanResponse> {
+    const request: GeneratePlanRequest = {
+      theme_id: themeId
+    };
+    return this.client.post<GeneratePlanResponse>('/theme/generate-plan', request);
   }
 }
 

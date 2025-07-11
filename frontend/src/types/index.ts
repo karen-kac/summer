@@ -95,6 +95,50 @@ export interface ResearchTheme {
   difficulty: 'easy' | 'medium' | 'hard';
 }
 
+// AIが生成する研究計画のステップ
+export interface AIResearchStep {
+  title: string;
+  description: string;
+  tips: string[];
+  duration: string;
+  order: number;
+}
+
+// AIが生成する研究計画
+export interface AIResearchPlan {
+  theme_id: string;
+  theme_title: string;
+  steps: AIResearchStep[];
+  total_estimated_days: number;
+  difficulty: 'easy' | 'medium' | 'hard';
+  genre: Genre;
+}
+
+// 研究計画生成API関連の型
+export interface GeneratePlanRequest {
+  theme_id: string;
+}
+
+export interface GeneratePlanResponse {
+  success: boolean;
+  message: string;
+  plan?: AIResearchPlan;
+}
+
+export interface GetSavedThemeResponse {
+  success: boolean;
+  message: string;
+  theme?: ResearchTheme;
+  user_profile?: UserProfile;
+}
+
+export interface GetResearchPlanResponse {
+  success: boolean;
+  message: string;
+  plan?: AIResearchPlan;
+  is_cached: boolean;
+}
+
 export interface ResearchProject {
   id: string;
   userId: string;

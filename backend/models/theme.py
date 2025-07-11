@@ -41,3 +41,44 @@ class SaveThemeResponse(BaseModel):
     success: bool
     message: str
     saved_theme_id: str
+
+
+class ResearchStep(BaseModel):
+    title: str
+    description: str
+    tips: List[str]
+    duration: str
+    order: int
+
+
+class ResearchPlan(BaseModel):
+    theme_id: str
+    theme_title: str
+    steps: List[ResearchStep]
+    total_estimated_days: int
+    difficulty: Literal["easy", "medium", "hard"]
+    genre: Genre
+
+
+class GeneratePlanRequest(BaseModel):
+    theme_id: str
+
+
+class GeneratePlanResponse(BaseModel):
+    success: bool
+    message: str
+    plan: Optional[ResearchPlan] = None
+
+
+class GetSavedThemeResponse(BaseModel):
+    success: bool
+    message: str
+    theme: Optional[ResearchTheme] = None
+    user_profile: Optional[UserProfile] = None
+
+
+class GetResearchPlanResponse(BaseModel):
+    success: bool
+    message: str
+    plan: Optional[ResearchPlan] = None
+    is_cached: bool = False

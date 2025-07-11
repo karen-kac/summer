@@ -123,12 +123,18 @@ class GeminiClient:
                 # リスト形式の場合はそのまま返す
                 if isinstance(result, list):
                     return result
-                # 辞書形式の場合、テーマのリストが含まれているかチェック
+                # 辞書形式の場合の処理
                 elif isinstance(result, dict):
+                    # テーマ生成の場合：themesキーを探す
                     if 'themes' in result:
                         return result['themes']
+                    # 研究計画生成の場合：辞書形式をそのまま返す
+                    elif 'steps' in result:
+                        print(f"研究計画形式を検出: {len(result.get('steps', []))}ステップ")
+                        return result
+                    # その他の単一オブジェクトの場合はリストにラップ
                     else:
-                        return [result]  # 単一のテーマオブジェクトとして扱う
+                        return [result]
                 else:
                     raise ValueError(f"予期しないJSON形式: {type(result)}")
 
