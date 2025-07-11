@@ -6,9 +6,11 @@ import '../styles/ThemeSelector.css';
 interface ThemeSelectorPageProps {
   onProfileComplete: (profile: UserProfile) => void;
   onBack: () => void;
+  isLoading?: boolean;
+  error?: string;
 }
 
-const ThemeSelectorPage: React.FC<ThemeSelectorPageProps> = ({ onProfileComplete, onBack }) => {
+const ThemeSelectorPage: React.FC<ThemeSelectorPageProps> = ({ onProfileComplete, onBack, isLoading = false, error }) => {
   const [profile, setProfile] = useState<PartialUserProfile>({
     grade: undefined,
     interests: [],
@@ -193,20 +195,45 @@ const ThemeSelectorPage: React.FC<ThemeSelectorPageProps> = ({ onProfileComplete
         </div>
       </div>
 
+      {error && (
+        <div className="error-message" style={{
+          marginBottom: '20px',
+          padding: '15px',
+          backgroundColor: '#ffebee',
+          color: '#c62828',
+          borderRadius: '8px',
+          textAlign: 'center',
+          whiteSpace: 'pre-line'  // 改行文字を正しく表示
+        }}>
+          <span className="emoji">⚠️</span>
+          <div className="label" style={{ marginLeft: '8px' }}>{error}</div>
+        </div>
+      )}
+
       <div className="submit-section horizontal">
         <button
           className="submit-btn secondary"
           onClick={onBack}
+          disabled={isLoading}
         >
           <span className="label">戻る</span>
         </button>
         <button
-          className={`submit-btn ${isComplete ? 'ready' : 'disabled'}`}
+          className={`submit-btn ${(isComplete && !isLoading) ? 'ready' : 'disabled'}`}
           onClick={handleSubmit}
-          disabled={!isComplete}
+          disabled={!isComplete || isLoading}
         >
-          <span className="emoji">🎉</span>
-          <span className="label">自由研究のテーマを探す！</span>
+          {isLoading ? (
+            <>
+              <span className="emoji">🤖</span>
+              <span className="label">AIがテーマを考え中...</span>
+            </>
+          ) : (
+            <>
+              <span className="emoji">🎉</span>
+              <span className="label">AIに自由研究のテーマを生成してもらう！</span>
+            </>
+          )}
         </button>
       </div>
     </div>

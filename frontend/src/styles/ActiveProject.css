@@ -61,6 +61,16 @@
   font-weight: 500;
 }
 
+.ai-badge {
+  background: linear-gradient(135deg, #2e7d32 0%, #4caf50 100%);
+  color: white;
+  padding: 5px 15px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 500;
+  box-shadow: 0 2px 4px rgba(76, 175, 80, 0.3);
+}
+
 .overall-progress {
   min-width: 200px;
 }
@@ -86,6 +96,121 @@
   background: linear-gradient(90deg, #4caf50, #8bc34a);
   border-radius: 6px;
   transition: width 0.3s ease;
+}
+
+/* ローディング表示 */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  background: white;
+  border-radius: 15px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  padding: 40px;
+  text-align: center;
+}
+
+.loading-spinner {
+  font-size: 48px;
+  margin-bottom: 20px;
+  animation: spin 2s linear infinite;
+}
+
+.loading-container h2 {
+  color: #333;
+  font-size: 24px;
+  margin-bottom: 10px;
+}
+
+.loading-container p {
+  color: #666;
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* エラー表示 */
+.error-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  background: white;
+  border-radius: 15px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  padding: 40px;
+  text-align: center;
+}
+
+.error-container h2 {
+  color: #d32f2f;
+  font-size: 24px;
+  margin-bottom: 10px;
+}
+
+.error-container p {
+  color: #666;
+  font-size: 16px;
+  line-height: 1.6;
+  margin-bottom: 20px;
+}
+
+.error-container button {
+  background: #4caf50;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.3s ease;
+}
+
+.error-container button:hover {
+  background: #45a049;
+}
+
+/* エラー通知 */
+.error-notice {
+  background: #fff3cd;
+  border: 1px solid #ffeaa7;
+  color: #856404;
+  padding: 15px;
+  border-radius: 10px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.error-notice span {
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+/* 計画ステータス通知 */
+.plan-status-notice {
+  background: #d4edda;
+  border: 1px solid #c3e6cb;
+  color: #155724;
+  padding: 15px;
+  border-radius: 10px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.plan-status-notice span {
+  font-size: 14px;
+  line-height: 1.4;
 }
 
 /* ActiveProjectページ専用のコンテンツレイアウト */
@@ -347,6 +472,11 @@
   .secondary-btn {
     min-width: auto;
   }
+
+  .loading-container,
+  .error-container {
+    padding: 30px;
+  }
 }
 
 @media (max-width: 480px) {
@@ -368,5 +498,10 @@
 
   .step-card {
     padding: 15px;
+  }
+
+  .loading-container,
+  .error-container {
+    padding: 20px;
   }
 }

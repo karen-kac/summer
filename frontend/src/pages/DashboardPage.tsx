@@ -1,5 +1,5 @@
 import React from 'react';
-import { UserProfile, ResearchProject, Achievement } from '../types';
+import { UserProfile, ResearchProject, Achievement, ResearchTheme } from '../types';
 import '../styles/Dashboard.css';
 import '../styles/Common.css';
 import '../styles/Components.css';
@@ -22,12 +22,15 @@ interface DashboardPageProps {
   };
   recentAchievements: Achievement[];
   todaysTasks: TaskItem[];
+  savedThemes: ResearchTheme[];
+  savedThemesLoading: boolean;
   onStartNewResearch: () => void;
   onContinueProject: (project: ResearchProject) => void;
   onViewAllProjects: () => void;
   onOpenAITutor: () => void;
   onViewRecords: () => void;
   onViewLearning: () => void;
+  onSelectSavedTheme: (theme: ResearchTheme) => void;
 }
 
 const DashboardPage: React.FC<DashboardPageProps> = ({
@@ -37,12 +40,15 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
   userStats,
   recentAchievements,
   todaysTasks,
+  savedThemes,
+  savedThemesLoading,
   onStartNewResearch,
   onContinueProject,
   onViewAllProjects,
   onOpenAITutor,
   onViewRecords,
-  onViewLearning
+  onViewLearning,
+  onSelectSavedTheme
 }) => {
   const getGradeDisplayName = (grade: string) => {
     const gradeMap: { [key: string]: string } = {
@@ -122,13 +128,17 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
         </div>
         <div className="card tasks-card">
           <div className="card-title">📅 今日のタスク</div>
-          {todaysTasks.map((task, i) => (
-            <div key={i} className={`task-item${task.urgent ? " urgent" : ""}`}>
-              <span className="task-icon">{task.icon}</span>
-              <span className="task-text">{task.task}</span>
-              {task.urgent && <span className="urgent-badge">急ぎ</span>}
-            </div>
-          ))}
+          {todaysTasks.length === 0 ? (
+            <div>タスクはありません</div>
+          ) : (
+            todaysTasks.map((task, i) => (
+              <div key={i} className={`task-item${task.urgent ? " urgent" : ""}`}>
+                <span className="task-icon">{task.icon}</span>
+                <span className="task-text">{task.task}</span>
+                {task.urgent && <span className="urgent-badge">急ぎ</span>}
+              </div>
+            ))
+          )}
         </div>
       </div>
       {/* 下段：2つ横並び */}

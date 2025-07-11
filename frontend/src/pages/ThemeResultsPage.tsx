@@ -28,11 +28,47 @@ const ThemeResultsPage: React.FC<ThemeResultsPageProps> = ({ themes, onThemeSele
     }
   };
 
+  // テーマがない場合の表示
+  if (themes.length === 0) {
+    return (
+      <div className="theme-results">
+        <div className="results-header">
+          <h1>😔 テーマが見つかりませんでした</h1>
+          <p>サーバーとの接続に問題があったようです</p>
+        </div>
+
+        <div className="no-themes-message" style={{
+          textAlign: 'center',
+          padding: '40px 20px',
+          backgroundColor: '#f5f5f5',
+          borderRadius: '12px',
+          margin: '20px 0'
+        }}>
+          <div style={{ fontSize: '64px', marginBottom: '20px' }}>🚫</div>
+          <h3 style={{ color: '#666', marginBottom: '15px' }}>テーマを生成できませんでした</h3>
+          <p style={{ color: '#888', lineHeight: '1.6' }}>
+            以下をお試しください：<br/>
+            • ページを再読み込みしてください<br/>
+            • サーバーが起動していることを確認してください<br/>
+            • しばらく時間をおいて再度お試しください
+          </p>
+        </div>
+
+        <div className="back-section">
+          <button className="back-btn" onClick={onBackToSelector}>
+            <span className="emoji">🔄</span>
+            <span className="label">再度テーマを探す</span>
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="theme-results">
       <div className="results-header">
-        <h1>🎯 あなたにおすすめの自由研究テーマ！</h1>
-        <p>3つのテーマから選んでください</p>
+        <h1>🤖 AIがあなたのために生成した自由研究テーマ！</h1>
+        <p>あなたのプロフィールに基づいて、AIが{themes.length}つのオリジナルテーマを作成しました</p>
       </div>
 
       <div className="themes-grid">

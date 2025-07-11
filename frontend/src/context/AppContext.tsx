@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { UserProfile, ResearchTheme, ResearchProject, AuthState, LoginRequest, SignupRequest, User, Grade, Interest, Personality, Strength, Duration, Record, Schedule } from '../types';
-import { generateMockThemes } from '../utils/mockThemeGenerator';
-import { mockActiveProjects, mockUserStats, mockRecentAchievements, mockPastProjects, mockRecords, mockSchedules } from '../utils/mockData';
+import { themeApi, ApiError } from '../services/api';
 
 // ヘルパー関数: 研究ジャンルに応じたステップ数を返す
 const getStepCount = (genre: string): number => {
@@ -32,6 +31,10 @@ interface AppContextType {
   // テーマ関連
   generatedThemes: ResearchTheme[];
   selectedTheme: ResearchTheme | null;
+  themeGenerationLoading: boolean;
+  themeGenerationError: string;
+  savedThemes: ResearchTheme[];
+  savedThemesLoading: boolean;
 
   // アクション
   handleLogin: (credentials: LoginRequest) => Promise<void>;
@@ -46,6 +49,8 @@ interface AppContextType {
   generateTasksForProject: (project: ResearchProject, stepIndex: number) => Array<{ icon: string; task: string; urgent: boolean }>;
   addRecord: (record: Partial<Record>) => void;
   updateRecord: (recordId: string, updates: Partial<Record>) => void;
+  generateThemesFromAPI: (profile: UserProfile, useAI?: boolean) => Promise<void>;
+  loadSavedThemes: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -74,16 +79,17 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const [generatedThemes, setGeneratedThemes] = useState<ResearchTheme[]>([]);
   const [selectedTheme, setSelectedTheme] = useState<ResearchTheme | null>(null);
   const [selectedProject, setSelectedProject] = useState<ResearchProject | null>(null);
+  const [themeGenerationLoading, setThemeGenerationLoading] = useState<boolean>(false);
+  const [themeGenerationError, setThemeGenerationError] = useState<string>('');
+  const [savedThemes, setSavedThemes] = useState<ResearchTheme[]>([]);
+  const [savedThemesLoading, setSavedThemesLoading] = useState<boolean>(false);
 
   // プロジェクト状態の管理を追加
-  const [activeProjects, setActiveProjects] = useState<ResearchProject[]>(mockActiveProjects);
-  const [pastProjects, setPastProjects] = useState<ResearchProject[]>(mockPastProjects);
-  const [records, setRecords] = useState<Record[]>(mockRecords);
-  const [schedules, setSchedules] = useState<Schedule[]>(mockSchedules);
-  const [todaysTasks, setTodaysTasks] = useState([
-    { icon: '🌱', task: '植物の成長を測定しよう', urgent: true },
-    { icon: '📷', task: '実験結果の写真を撮ろう', urgent: false }
-  ]);
+  const [activeProjects, setActiveProjects] = useState<ResearchProject[]>([]);
+  const [pastProjects, setPastProjects] = useState<ResearchProject[]>([]);
+  const [records, setRecords] = useState<Record[]>([]);
+  const [schedules, setSchedules] = useState<Schedule[]>([]);
+  const [todaysTasks, setTodaysTasks] = useState<Array<{ icon: string; task: string; urgent: boolean }>>([]);
 
   // 研究タイプとステップに応じたタスク生成
   const generateTasksForProject = (project: ResearchProject, stepIndex: number) => {
@@ -428,6 +434,54 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     );
   };
 
+      // Gemini AIを使用してテーマを生成する関数
+  const generateThemesFromAPI = async (profile: UserProfile): Promise<void> => {
+    setThemeGenerationLoading(true);
+    setThemeGenerationError('');
+
+    try {
+      const response = await themeApi.generateThemes(profile);
+
+      setGeneratedThemes(response.themes);
+      console.log('✅ Gemini AI テーマ生成成功:', response.themes.length, '件のテーマを取得');
+    } catch (error) {
+      console.error('❌ Gemini AI テーマ生成エラー:', error);
+
+      if (error instanceof ApiError) {
+        if (error.status === 500) {
+          setThemeGenerationError(`Gemini AI エラー: ${error.message}\n\n以下を確認してください：\n・実際のGEMINI_API_KEYが正しく設定されているか\n・インターネット接続が有効か\n・Google AI StudioでAPI制限に達していないか\n\n詳細な設定方法は backend/GEMINI_API_SETUP.md を参照してください。`);
+        } else {
+          setThemeGenerationError(`サーバーエラー (${error.status}): ${error.message}\n\nサーバーが起動していることを確認してください。`);
+        }
+      } else {
+        setThemeGenerationError('Gemini AI テーマ生成中にエラーが発生しました。\n\n・サーバーが起動していることを確認してください\n・ネットワーク接続を確認してください\n・実際のGEMINI_API_KEYが設定されていることを確認してください\n・しばらく時間をおいて再度お試しください');
+      }
+
+      // エラー時はテーマリストを空にする
+      setGeneratedThemes([]);
+    } finally {
+      setThemeGenerationLoading(false);
+    }
+  };
+
+  // 保存されたテーマを読み込む関数
+  const loadSavedThemes = async (): Promise<void> => {
+    setSavedThemesLoading(true);
+
+    try {
+      // TODO: バックエンドに保存されたテーマ一覧を取得するエンドポイントを追加する
+      // 一時的にモックデータを使用
+      await new Promise(resolve => setTimeout(resolve, 500)); // 読み込み時間をシミュレート
+      setSavedThemes([]); // 空の配列を設定
+      console.log('✅ 保存されたテーマ読み込み成功: 0件のテーマを取得');
+    } catch (error) {
+      console.error('❌ 保存されたテーマ読み込みエラー:', error);
+      setSavedThemes([]);
+    } finally {
+      setSavedThemesLoading(false);
+    }
+  };
+
   const value: AppContextType = {
     authState,
     authError,
@@ -440,6 +494,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     schedules,
     generatedThemes,
     selectedTheme,
+    themeGenerationLoading,
+    themeGenerationError,
+    savedThemes,
+    savedThemesLoading,
     handleLogin,
     handleSignup,
     handleLogout,
@@ -451,7 +509,9 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     handleThemeDecision,
     generateTasksForProject,
     addRecord,
-    updateRecord
+    updateRecord,
+    generateThemesFromAPI,
+    loadSavedThemes
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

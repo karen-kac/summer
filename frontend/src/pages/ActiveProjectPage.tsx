@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { ResearchProject, ResearchStep, Genre } from '../types';
+import { ResearchProject, ResearchStep, Genre, AIResearchStep } from '../types';
+import { themeApi } from '../services/api';
 import '../styles/Common.css';
 import '../styles/Components.css';
 import '../styles/ActiveProject.css';
@@ -24,9 +25,23 @@ const ActiveProjectPage: React.FC<ActiveProjectPageProps> = ({
 }) => {
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [projectSteps, setProjectSteps] = useState<StepTemplate[]>([]);
+  const [isLoadingPlan, setIsLoadingPlan] = useState(false);
+  const [planError, setPlanError] = useState<string | null>(null);
+  const [isUsingAIPlan, setIsUsingAIPlan] = useState(false);
+  const [planStatus, setPlanStatus] = useState<'cached' | 'generated' | 'default' | null>(null);
 
-  // 研究タイプに応じたステップテンプレートを定義
-  const getStepTemplates = (genre: Genre): StepTemplate[] => {
+  // AIが生成したステップをStepTemplateに変換
+  const convertAIStepsToTemplate = (aiSteps: AIResearchStep[]): StepTemplate[] => {
+    return aiSteps.map(step => ({
+      title: step.title,
+      description: step.description,
+      tips: step.tips,
+      duration: step.duration
+    }));
+  };
+
+  // 研究タイプに応じたステップテンプレートを定義（フォールバック用）
+  const getDefaultStepTemplates = (genre: Genre): StepTemplate[] => {
     switch (genre) {
       case 'experiment':
         return [
@@ -235,14 +250,67 @@ const ActiveProjectPage: React.FC<ActiveProjectPageProps> = ({
     }
   };
 
-  useEffect(() => {
-    const steps = getStepTemplates(project.genre || 'experiment');
-    setProjectSteps(steps);
+  // 研究計画を取得または生成
+  const loadResearchPlan = async (themeId: string) => {
+    setIsLoadingPlan(true);
+    setPlanError(null);
 
-    // プロジェクトの進捗から現在のステップを計算
-    const progressIndex = Math.floor((project.progressPercentage / 100) * steps.length);
-    setCurrentStepIndex(Math.min(progressIndex, steps.length - 1));
+    try {
+      // まず既存の研究計画を取得を試行
+      const existingPlanResponse = await themeApi.getResearchPlan(themeId);
+
+      if (existingPlanResponse.success && existingPlanResponse.plan) {
+        const aiSteps = convertAIStepsToTemplate(existingPlanResponse.plan.steps);
+        setProjectSteps(aiSteps);
+        setIsUsingAIPlan(true);
+        setPlanStatus('cached');
+        return;
+      }
+
+      // 既存の研究計画がない場合、新しく生成
+      const generateResponse = await themeApi.generateResearchPlan(themeId);
+
+      if (generateResponse.success && generateResponse.plan) {
+        const aiSteps = convertAIStepsToTemplate(generateResponse.plan.steps);
+        setProjectSteps(aiSteps);
+        setIsUsingAIPlan(true);
+        setPlanStatus('generated');
+      } else {
+        const defaultSteps = getDefaultStepTemplates(project.genre || 'experiment');
+        setProjectSteps(defaultSteps);
+        setIsUsingAIPlan(false);
+        setPlanStatus('default');
+      }
+    } catch (error) {
+      setPlanError('研究計画の取得に失敗しました。デフォルトプランを使用します。');
+      const defaultSteps = getDefaultStepTemplates(project.genre || 'experiment');
+      setProjectSteps(defaultSteps);
+      setIsUsingAIPlan(false);
+      setPlanStatus('default');
+    } finally {
+      setIsLoadingPlan(false);
+    }
+  };
+
+  useEffect(() => {
+    // プロジェクトにthemeIdがある場合、研究計画を取得
+    if (project.themeId) {
+      loadResearchPlan(project.themeId);
+    } else {
+      const defaultSteps = getDefaultStepTemplates(project.genre || 'experiment');
+      setProjectSteps(defaultSteps);
+      setIsUsingAIPlan(false);
+      setPlanStatus('default');
+    }
   }, [project]);
+
+  useEffect(() => {
+    if (projectSteps.length > 0) {
+      // プロジェクトの進捗から現在のステップを計算
+      const progressIndex = Math.floor((project.progressPercentage / 100) * projectSteps.length);
+      setCurrentStepIndex(Math.min(progressIndex, projectSteps.length - 1));
+    }
+  }, [project.progressPercentage, projectSteps]);
 
   const handleStepComplete = () => {
     if (currentStepIndex < projectSteps.length - 1) {
@@ -274,8 +342,43 @@ const ActiveProjectPage: React.FC<ActiveProjectPageProps> = ({
     return iconMap[genre] || '🧪';
   };
 
+  const getPlanStatusMessage = () => {
+    switch (planStatus) {
+      case 'cached':
+        return '保存された研究計画を使用しています';
+      case 'generated':
+        return '新しい研究計画を生成・保存しました';
+      case 'default':
+        return 'デフォルトの研究計画を使用しています';
+      default:
+        return '';
+    }
+  };
+
+  // ローディング中の表示
+  if (isLoadingPlan) {
+    return (
+      <div className="page-container">
+        <div className="loading-container">
+          <div className="loading-spinner"></div>
+          <h2>研究計画を準備中...</h2>
+          <p>あなたのテーマに最適な研究計画を取得しています。</p>
+        </div>
+      </div>
+    );
+  }
+
+  // ステップがない場合の表示
   if (projectSteps.length === 0) {
-    return <div>読み込み中...</div>;
+    return (
+      <div className="page-container">
+        <div className="error-container">
+          <h2>研究計画の読み込みに失敗しました</h2>
+          <p>しばらく待ってから再度お試しください。</p>
+          <button onClick={onBack}>ダッシュボードに戻る</button>
+        </div>
+      </div>
+    );
   }
 
   const currentStep = projectSteps[currentStepIndex];
@@ -294,6 +397,11 @@ const ActiveProjectPage: React.FC<ActiveProjectPageProps> = ({
               <span className="genre-badge">
                 {getGenreIcon(project.genre || 'experiment')} {getGenreDisplayName(project.genre || 'experiment')}
               </span>
+              {isUsingAIPlan && (
+                <span className="ai-badge">
+                  🤖 AI研究計画
+                </span>
+              )}
             </div>
           </div>
           <div className="overall-progress">
@@ -307,6 +415,18 @@ const ActiveProjectPage: React.FC<ActiveProjectPageProps> = ({
           </div>
         </div>
       </div>
+
+      {planError && (
+        <div className="error-notice">
+          <span>⚠️ {planError}</span>
+        </div>
+      )}
+
+      {planStatus && (
+        <div className="plan-status-notice">
+          <span>ℹ️ {getPlanStatusMessage()}</span>
+        </div>
+      )}
 
       <div className="active-project-content">
         <div className="steps-timeline">
