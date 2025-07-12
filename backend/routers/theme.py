@@ -1,22 +1,22 @@
 from fastapi import APIRouter, HTTPException
 from models.theme import UserProfile, ResearchTheme, ThemeListResponse, SaveThemeRequest, SaveThemeResponse, GeneratePlanRequest, GeneratePlanResponse, GetSavedThemeResponse, GetResearchPlanResponse
 from services.theme_service import ThemeService
-from repositories import ThemeRepository, GeminiClient
+from repositories import ThemeRepository, BedrockClient
 from utils import PromptBuilder
 
 router = APIRouter()
 
-# 実際のGemini APIを使用するサービス
+# 実際のBedrock APIを使用するサービス
 prompt_builder = PromptBuilder()
-gemini_client = GeminiClient()
-theme_repository = ThemeRepository(prompt_builder, gemini_client)
+bedrock_client = BedrockClient()
+theme_repository = ThemeRepository(prompt_builder, bedrock_client)
 theme_service = ThemeService(theme_repository)
 
 
 @router.post("/generate", response_model=ThemeListResponse)
 async def generate_theme(profile: UserProfile):
     """
-    Gemini AIを使用してテーマを生成する
+    Bedrock AIを使用してテーマを生成する
     """
     themes = await theme_service.generate_themes(profile=profile)
     return themes

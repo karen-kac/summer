@@ -1,10 +1,10 @@
 from utils.prompt_builder import PromptBuilder
-from repositories import GeminiClient
+from repositories.client.bedrock_client import BedrockClient
 from models.theme import ResearchTheme, UserProfile
 
 
 class ThemeRepository:
-    def __init__(self, prompt_builder: PromptBuilder, client: GeminiClient):
+    def __init__(self, prompt_builder: PromptBuilder, client: BedrockClient):
         self.builder = prompt_builder
         self.client = client
 

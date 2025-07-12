@@ -94,7 +94,7 @@ class ThemeApi {
   constructor(private client: ApiClient) {}
 
   /**
-   * Gemini AIを使用してテーマを生成する
+   * Bedrock AIを使用してテーマを生成する
    */
   async generateThemes(profile: UserProfile): Promise<ThemeListResponse> {
     return this.client.post<ThemeListResponse>('/theme/generate', profile);
