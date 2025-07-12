@@ -1,16 +1,36 @@
-annotated-types==0.7.0
-anyio==4.9.0
-click==8.2.1
+# 基本ライブラリ
 fastapi==0.115.14
-h11==0.16.0
-idna==3.10
+uvicorn[standard]==0.35.0
 pydantic==2.11.7
 pydantic_core==2.33.2
-sniffio==1.3.1
-starlette==0.46.2
+python-dotenv==1.1.1
+
+# 型関連
+annotated-types==0.7.0
 typing-inspection==0.4.1
 typing_extensions==4.14.0
-uvicorn==0.35.0
-python-dotenv==1.1.1
+
+# ASGIスタック関連
+anyio==4.9.0
+click==8.2.1
+h11==0.16.0
+idna==3.10
+sniffio==1.3.1
+starlette==0.46.2
+
+# AWS連携
 boto3==1.34.0
 aioboto3==12.3.0
+botocore==1.34.0
+
+# LINE API, 画像処理, その他ユーティリティ
+line-bot-sdk==3.12.0
+httpx==0.25.0
+python-multipart==0.0.6
+pillow==10.0.1
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+
+# Gemini API（必要に応じて）
+google-generativeai==0.8.5
+
