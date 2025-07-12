@@ -20,20 +20,20 @@ class BedrockClient:
             # AWS認証情報の確認
             aws_access_key = os.environ.get("AWS_ACCESS_KEY_ID")
             aws_secret_key = os.environ.get("AWS_SECRET_ACCESS_KEY")
-            aws_region = os.environ.get("AWS_REGION", "us-east-1")
-            
+            bedrock_region = os.environ.get("BEDROCK_REGION", "us-east-1")
+
             if not aws_access_key or not aws_secret_key:
                 raise ValueError("AWS認証情報が設定されていません。")
 
             # Bedrockクライアントの初期化
             self.client = boto3.client(
                 "bedrock-runtime",
-                region_name=aws_region,
+                region_name=bedrock_region,
                 aws_access_key_id=aws_access_key,
                 aws_secret_access_key=aws_secret_key
             )
             self.model_id = os.environ.get("BEDROCK_MODEL_ID")
-            
+
             if not self.model_id:
                 raise ValueError("BedrockモデルIDが設定されていません。")
 
@@ -66,14 +66,14 @@ class BedrockClient:
                     }
                 ]
             }
-            
+
             response = self.client.invoke_model(
                 modelId=self.model_id,
                 body=json.dumps(body)
             )
-            
+
             response_body = json.loads(response["body"].read())
-            
+
             if not response_body.get("content"):
                 raise ValueError("Bedrock APIから空の応答が返されました")
 

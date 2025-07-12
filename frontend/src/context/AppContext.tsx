@@ -434,7 +434,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     );
   };
 
-      // Gemini AIを使用してテーマを生成する関数
+      // Bedrock AIを使用してテーマを生成する関数
   const generateThemesFromAPI = async (profile: UserProfile): Promise<void> => {
     setThemeGenerationLoading(true);
     setThemeGenerationError('');
@@ -443,18 +443,18 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       const response = await themeApi.generateThemes(profile);
 
       setGeneratedThemes(response.themes);
-      console.log('✅ Gemini AI テーマ生成成功:', response.themes.length, '件のテーマを取得');
+      console.log('✅ Bedrock AI テーマ生成成功:', response.themes.length, '件のテーマを取得');
     } catch (error) {
-      console.error('❌ Gemini AI テーマ生成エラー:', error);
+      console.error('❌ Bedrock AI テーマ生成エラー:', error);
 
       if (error instanceof ApiError) {
         if (error.status === 500) {
-          setThemeGenerationError(`Gemini AI エラー: ${error.message}\n\n以下を確認してください：\n・実際のGEMINI_API_KEYが正しく設定されているか\n・インターネット接続が有効か\n・Google AI StudioでAPI制限に達していないか\n\n詳細な設定方法は backend/GEMINI_API_SETUP.md を参照してください。`);
+          setThemeGenerationError(`Bedrock AI エラー: ${error.message}\n\n以下を確認してください：\n・実際のAWS認証情報が正しく設定されているか\n・インターネット接続が有効か\n・AWS Bedrockでアクセス制限に達していないか\n\n詳細な設定方法は backend/BEDROCK_API_SETUP.md を参照してください。`);
         } else {
           setThemeGenerationError(`サーバーエラー (${error.status}): ${error.message}\n\nサーバーが起動していることを確認してください。`);
         }
       } else {
-        setThemeGenerationError('Gemini AI テーマ生成中にエラーが発生しました。\n\n・サーバーが起動していることを確認してください\n・ネットワーク接続を確認してください\n・実際のGEMINI_API_KEYが設定されていることを確認してください\n・しばらく時間をおいて再度お試しください');
+        setThemeGenerationError('Bedrock AI テーマ生成中にエラーが発生しました。\n\n・サーバーが起動していることを確認してください\n・ネットワーク接続を確認してください\n・実際のAWS認証情報が設定されていることを確認してください\n・しばらく時間をおいて再度お試しください');
       }
 
       // エラー時はテーマリストを空にする
