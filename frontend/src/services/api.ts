@@ -1,4 +1,14 @@
-import { UserProfile, ResearchTheme, GeneratePlanRequest, GeneratePlanResponse, GetSavedThemeResponse, GetResearchPlanResponse } from '../types';
+import {
+  UserProfile,
+  ResearchTheme,
+  GeneratePlanRequest,
+  GeneratePlanResponse,
+  GetSavedThemeResponse,
+  GetResearchPlanResponse,
+  LineConnectionStatus,
+  LineConnectRequest,
+  ProgressNotificationRequest
+} from '../types';
 
 // APIの基本設定
 const API_BASE_URL = 'http://127.0.0.1:8000';
@@ -87,6 +97,12 @@ class ApiClient {
       method: 'GET',
     });
   }
+
+  async delete<T>(endpoint: string): Promise<T> {
+    return this.request<T>(endpoint, {
+      method: 'DELETE',
+    });
+  }
 }
 
 // テーマAPI
@@ -136,11 +152,63 @@ class ThemeApi {
   }
 }
 
+// LINE API
+class LineApi {
+  constructor(private client: ApiClient) {}
+
+  /**
+   * ユーザーのLINE連携状態を取得
+   */
+  async getConnectionStatus(userId: string): Promise<LineConnectionStatus> {
+    return this.client.get<LineConnectionStatus>(`/line/status/${userId}`);
+  }
+
+  /**
+   * LINEアカウントを連携
+   */
+  async connectAccount(request: LineConnectRequest): Promise<{ status: string; connection: any }> {
+    return this.client.post('/line/connect', request);
+  }
+
+  /**
+   * LINEアカウント連携を解除
+   */
+  async disconnectAccount(userId: string): Promise<{ status: string; message: string }> {
+    return this.client.delete(`/line/disconnect/${userId}`);
+  }
+
+  /**
+   * 研究進捗通知を送信
+   */
+  async sendProgressNotification(request: ProgressNotificationRequest): Promise<{ status: string; message: string }> {
+    return this.client.post('/line/send-progress-notification', request);
+  }
+
+  /**
+   * 日次リマインダーを送信
+   */
+  async sendDailyReminder(userId: string, researchTitle: string): Promise<{ status: string; message: string }> {
+    return this.client.post('/line/send-daily-reminder', {
+      user_id: userId,
+      research_title: researchTitle
+    });
+  }
+
+  /**
+   * LINE API の健康状態をチェック
+   */
+  async healthCheck(): Promise<{ status: string; line_api_configured: boolean; message: string }> {
+    return this.client.get('/line/health');
+  }
+}
+
 // API インスタンス
 const apiClient = new ApiClient();
 export const themeApi = new ThemeApi(apiClient);
+export const lineApi = new LineApi(apiClient);
 
 // デフォルトエクスポート
 export default {
   theme: themeApi,
+  line: lineApi,
 };

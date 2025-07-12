@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { UserProfile, ResearchTheme, ResearchProject, AuthState, LoginRequest, SignupRequest, User, Grade, Interest, Personality, Strength, Duration, Record, Schedule } from '../types';
-import { themeApi, ApiError } from '../services/api';
+import { UserProfile, ResearchTheme, ResearchProject, AuthState, LoginRequest, SignupRequest, User, Grade, Interest, Personality, Strength, Duration, Record, Schedule, LineConnectionStatus } from '../types';
+import { themeApi, lineApi, ApiError } from '../services/api';
 
 // ヘルパー関数: 研究ジャンルに応じたステップ数を返す
 const getStepCount = (genre: string): number => {
@@ -36,6 +36,11 @@ interface AppContextType {
   savedThemes: ResearchTheme[];
   savedThemesLoading: boolean;
 
+  // LINE連携関連
+  lineConnectionStatus: LineConnectionStatus | null;
+  lineConnectionLoading: boolean;
+  lineConnectionError: string;
+
   // アクション
   handleLogin: (credentials: LoginRequest) => Promise<void>;
   handleSignup: (credentials: SignupRequest) => Promise<void>;
@@ -51,6 +56,12 @@ interface AppContextType {
   updateRecord: (recordId: string, updates: Partial<Record>) => void;
   generateThemesFromAPI: (profile: UserProfile, useAI?: boolean) => Promise<void>;
   loadSavedThemes: () => Promise<void>;
+
+  // LINE連携アクション
+  loadLineConnectionStatus: (userId: string) => Promise<void>;
+  connectToLine: (userId: string, lineUserId: string) => Promise<boolean>;
+  disconnectFromLine: (userId: string) => Promise<boolean>;
+  sendProgressNotification: (userId: string, researchTitle: string, progress: number, completedTasks: number, totalTasks: number, nextTask?: string) => Promise<boolean>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -83,6 +94,11 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const [themeGenerationError, setThemeGenerationError] = useState<string>('');
   const [savedThemes, setSavedThemes] = useState<ResearchTheme[]>([]);
   const [savedThemesLoading, setSavedThemesLoading] = useState<boolean>(false);
+
+  // LINE連携状態の管理を追加
+  const [lineConnectionStatus, setLineConnectionStatus] = useState<LineConnectionStatus | null>(null);
+  const [lineConnectionLoading, setLineConnectionLoading] = useState<boolean>(false);
+  const [lineConnectionError, setLineConnectionError] = useState<string>('');
 
   // プロジェクト状態の管理を追加
   const [activeProjects, setActiveProjects] = useState<ResearchProject[]>([]);
@@ -482,6 +498,103 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     }
   };
 
+  // LINE連携関連の関数
+  const loadLineConnectionStatus = async (userId: string): Promise<void> => {
+    setLineConnectionLoading(true);
+    setLineConnectionError('');
+
+    try {
+      const status = await lineApi.getConnectionStatus(userId);
+      setLineConnectionStatus(status);
+      console.log('✅ LINE連携状態取得成功:', status);
+    } catch (error) {
+      console.error('❌ LINE連携状態取得エラー:', error);
+      setLineConnectionError('LINE連携状態の取得に失敗しました');
+      setLineConnectionStatus({ is_connected: false });
+    } finally {
+      setLineConnectionLoading(false);
+    }
+  };
+
+  const connectToLine = async (userId: string, lineUserId: string): Promise<boolean> => {
+    setLineConnectionLoading(true);
+    setLineConnectionError('');
+
+    try {
+      const response = await lineApi.connectAccount({ user_id: userId, line_user_id: lineUserId });
+
+      if (response.status === 'success') {
+        await loadLineConnectionStatus(userId);
+        console.log('✅ LINE連携成功');
+        return true;
+      } else {
+        setLineConnectionError('LINE連携に失敗しました');
+        return false;
+      }
+    } catch (error) {
+      console.error('❌ LINE連携エラー:', error);
+      setLineConnectionError('LINE連携中にエラーが発生しました');
+      return false;
+    } finally {
+      setLineConnectionLoading(false);
+    }
+  };
+
+  const disconnectFromLine = async (userId: string): Promise<boolean> => {
+    setLineConnectionLoading(true);
+    setLineConnectionError('');
+
+    try {
+      const response = await lineApi.disconnectAccount(userId);
+
+      if (response.status === 'success') {
+        setLineConnectionStatus({ is_connected: false });
+        console.log('✅ LINE連携解除成功');
+        return true;
+      } else {
+        setLineConnectionError('LINE連携解除に失敗しました');
+        return false;
+      }
+    } catch (error) {
+      console.error('❌ LINE連携解除エラー:', error);
+      setLineConnectionError('LINE連携解除中にエラーが発生しました');
+      return false;
+    } finally {
+      setLineConnectionLoading(false);
+    }
+  };
+
+  const sendProgressNotification = async (
+    userId: string,
+    researchTitle: string,
+    progress: number,
+    completedTasks: number,
+    totalTasks: number,
+    nextTask?: string
+  ): Promise<boolean> => {
+    try {
+      const response = await lineApi.sendProgressNotification({
+        user_id: userId,
+        research_title: researchTitle,
+        progress_percentage: progress,
+        completed_tasks: completedTasks,
+        total_tasks: totalTasks,
+        next_task: nextTask
+      });
+
+      if (response.status === 'success') {
+        console.log('✅ 進捗通知送信成功');
+        return true;
+      } else {
+        console.error('❌ 進捗通知送信失敗:', response.message);
+        return false;
+      }
+    } catch (error) {
+      console.error('❌ 進捗通知送信エラー:', error);
+      return false;
+    }
+  };
+
   const value: AppContextType = {
     authState,
     authError,
@@ -498,6 +611,9 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     themeGenerationError,
     savedThemes,
     savedThemesLoading,
+    lineConnectionStatus,
+    lineConnectionLoading,
+    lineConnectionError,
     handleLogin,
     handleSignup,
     handleLogout,
@@ -511,7 +627,11 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     addRecord,
     updateRecord,
     generateThemesFromAPI,
-    loadSavedThemes
+    loadSavedThemes,
+    loadLineConnectionStatus,
+    connectToLine,
+    disconnectFromLine,
+    sendProgressNotification
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

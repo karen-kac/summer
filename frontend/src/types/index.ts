@@ -327,6 +327,35 @@ export interface AuthState {
   isLoading: boolean;
 }
 
+// LINE連携関連の型定義
+export interface LineConnection {
+  id: string;
+  line_user_id: string;
+  display_name?: string;
+  picture_url?: string;
+  connected_at: string;
+  last_interaction_at?: string;
+}
+
+export interface LineConnectionStatus {
+  is_connected: boolean;
+  connection?: LineConnection;
+}
+
+export interface LineConnectRequest {
+  user_id: string;
+  line_user_id: string;
+}
+
+export interface ProgressNotificationRequest {
+  user_id: string;
+  research_title: string;
+  progress_percentage: number;
+  completed_tasks: number;
+  total_tasks: number;
+  next_task?: string;
+}
+
 // API レスポンス用の型
 export interface ApiResponse<T> {
   success: boolean;
