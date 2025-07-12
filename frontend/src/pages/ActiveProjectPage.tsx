@@ -43,6 +43,11 @@ const ActiveProjectPage: React.FC<ActiveProjectPageProps> = ({
     locationInfo: null as any
   });
 
+  // 写真アップロード関連の状態
+  const [selectedImages, setSelectedImages] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [showPhotoModal, setShowPhotoModal] = useState(false);
+
   // AppContextからユーザー情報を取得
   const { authState } = useApp();
 
@@ -408,6 +413,49 @@ const ActiveProjectPage: React.FC<ActiveProjectPageProps> = ({
     setCurrentStepIndex(stepIndex);
   };
 
+  // 写真選択の処理
+  const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    const imageFiles = files.filter(file => file.type.startsWith('image/'));
+
+    if (imageFiles.length !== files.length) {
+      alert('画像ファイルのみアップロードできます。');
+      return;
+    }
+
+    // ファイルサイズ制限（5MB）
+    const oversizedFiles = imageFiles.filter(file => file.size > 5 * 1024 * 1024);
+    if (oversizedFiles.length > 0) {
+      alert('ファイルサイズは5MB以下にしてください。');
+      return;
+    }
+
+    setSelectedImages(prev => [...prev, ...imageFiles]);
+
+    // プレビュー画像を生成
+    imageFiles.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        if (e.target?.result) {
+          setImagePreviews(prev => [...prev, e.target!.result as string]);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  // 画像を削除
+  const handleRemoveImage = (index: number) => {
+    setSelectedImages(prev => prev.filter((_, i) => i !== index));
+    setImagePreviews(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // 画像をリセット
+  const resetImages = () => {
+    setSelectedImages([]);
+    setImagePreviews([]);
+  };
+
   // 記録モーダルを開く
   const handleOpenRecordModal = () => {
     // フォームをリセット
@@ -419,12 +467,26 @@ const ActiveProjectPage: React.FC<ActiveProjectPageProps> = ({
       weatherInfo: null,
       locationInfo: null
     });
+    resetImages();
     setShowRecordModal(true);
+  };
+
+  // 写真モーダルを開く
+  const handleOpenPhotoModal = () => {
+    resetImages();
+    setShowPhotoModal(true);
   };
 
   // 記録モーダルを閉じる
   const handleCloseRecordModal = () => {
     setShowRecordModal(false);
+    resetImages();
+  };
+
+  // 写真モーダルを閉じる
+  const handleClosePhotoModal = () => {
+    setShowPhotoModal(false);
+    resetImages();
   };
 
   // 記録フォームデータの更新
@@ -433,6 +495,24 @@ const ActiveProjectPage: React.FC<ActiveProjectPageProps> = ({
       ...prev,
       [field]: value
     }));
+  };
+
+  // 画像をBase64に変換する関数
+  const convertImageToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (reader.result) {
+          // data:image/jpeg;base64, の部分を除去してBase64文字列だけを取得
+          const base64 = (reader.result as string).split(',')[1];
+          resolve(base64);
+        } else {
+          reject(new Error('ファイルの読み込みに失敗しました'));
+        }
+      };
+      reader.onerror = () => reject(new Error('ファイルの読み込みエラー'));
+      reader.readAsDataURL(file);
+    });
   };
 
   // 記録を作成
@@ -452,6 +532,16 @@ const ActiveProjectPage: React.FC<ActiveProjectPageProps> = ({
     try {
       const currentStep = projectSteps[currentStepIndex];
 
+      // 画像をBase64に変換
+      const imageData = await Promise.all(
+        selectedImages.map(async (file, index) => ({
+          filename: file.name,
+          contentType: file.type,
+          size: file.size,
+          base64Data: await convertImageToBase64(file)
+        }))
+      );
+
       const createRequest: CreateRecordRequest = {
         projectId: project.id,
         stepId: `step-${currentStepIndex + 1}`,
@@ -463,7 +553,8 @@ const ActiveProjectPage: React.FC<ActiveProjectPageProps> = ({
         data: {
           stepName: currentStep?.title || '',
           stepIndex: currentStepIndex,
-          projectGenre: project.genre
+          projectGenre: project.genre,
+          images: imageData.length > 0 ? imageData : undefined
         },
         tags: recordFormData.tags,
         weatherInfo: recordFormData.weatherInfo,
@@ -478,7 +569,7 @@ const ActiveProjectPage: React.FC<ActiveProjectPageProps> = ({
       console.log('✅ 記録作成成功:', response);
 
       // 成功通知
-      // alert('記録が正常に保存されました！');
+      alert('記録が正常に保存されました！');
 
       // モーダルを閉じる
       handleCloseRecordModal();
@@ -486,6 +577,73 @@ const ActiveProjectPage: React.FC<ActiveProjectPageProps> = ({
     } catch (error) {
       console.error('❌ 記録作成エラー:', error);
       alert('記録の保存に失敗しました。もう一度お試しください。');
+    } finally {
+      setIsCreatingRecord(false);
+    }
+  };
+
+  // 写真のみの記録を作成
+  const handleCreatePhotoRecord = async () => {
+    if (!authState.user?.id) {
+      alert('ユーザーが認証されていません。再度ログインしてください。');
+      return;
+    }
+
+    if (selectedImages.length === 0) {
+      alert('写真を選択してください。');
+      return;
+    }
+
+    setIsCreatingRecord(true);
+
+    try {
+      const currentStep = projectSteps[currentStepIndex];
+
+      // 画像をBase64に変換
+      const imageData = await Promise.all(
+        selectedImages.map(async (file, index) => ({
+          filename: file.name,
+          contentType: file.type,
+          size: file.size,
+          base64Data: await convertImageToBase64(file)
+        }))
+      );
+
+      const createRequest: CreateRecordRequest = {
+        projectId: project.id,
+        stepId: `step-${currentStepIndex + 1}`,
+        recordType: 'photo',
+        title: `写真記録 - ${currentStep?.title || 'ステップ記録'}`,
+        content: `${selectedImages.length}枚の写真を追加しました。`,
+        recordDate: new Date().toISOString().split('T')[0],
+        recordTime: new Date().toTimeString().split(' ')[0].slice(0, 5),
+        data: {
+          stepName: currentStep?.title || '',
+          stepIndex: currentStepIndex,
+          projectGenre: project.genre,
+          images: imageData
+        },
+        tags: ['写真', currentStep?.title || ''],
+        weatherInfo: undefined,
+        locationInfo: undefined
+      };
+
+      console.log('🔄 写真記録作成中...', createRequest);
+
+      // AWSに記録を保存
+      const response = await recordApi.createRecord(authState.user.id, createRequest);
+
+      console.log('✅ 写真記録作成成功:', response);
+
+      // 成功通知
+      // alert('写真が正常に保存されました！');
+
+      // モーダルを閉じる
+      handleClosePhotoModal();
+
+    } catch (error) {
+      console.error('❌ 写真記録作成エラー:', error);
+      alert('写真の保存に失敗しました。もう一度お試しください。');
     } finally {
       setIsCreatingRecord(false);
     }
@@ -663,7 +821,7 @@ const ActiveProjectPage: React.FC<ActiveProjectPageProps> = ({
                 <button className="secondary-btn" onClick={handleOpenRecordModal}>
                   📝 記録する
                 </button>
-                <button className="secondary-btn">
+                <button className="secondary-btn" onClick={handleOpenPhotoModal}>
                   📷 写真を追加
                 </button>
                 <button className="secondary-btn">
@@ -748,6 +906,50 @@ const ActiveProjectPage: React.FC<ActiveProjectPageProps> = ({
                   }}
                 />
               </div>
+
+              <div className="form-group">
+                <label htmlFor="recordImages">写真（任意）</label>
+                <input
+                  id="recordImages"
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleImageSelect}
+                  disabled={isCreatingRecord}
+                  className="form-input"
+                />
+                <div className="form-helper-text">
+                  最大5MBまでの画像ファイル（JPG、PNG、GIF）をアップロードできます。
+                </div>
+
+                {imagePreviews.length > 0 && (
+                  <div className="image-preview-container">
+                    <div className="image-preview-label">選択された写真:</div>
+                    <div className="image-preview-grid">
+                      {imagePreviews.map((preview, index) => (
+                        <div key={index} className="image-preview-item">
+                          <img
+                            src={preview}
+                            alt={`プレビュー ${index + 1}`}
+                            className="image-preview"
+                          />
+                          <button
+                            type="button"
+                            className="image-remove-btn"
+                            onClick={() => handleRemoveImage(index)}
+                            disabled={isCreatingRecord}
+                          >
+                            ×
+                          </button>
+                          <div className="image-filename">
+                            {selectedImages[index]?.name}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="modal-footer">
@@ -764,6 +966,87 @@ const ActiveProjectPage: React.FC<ActiveProjectPageProps> = ({
                 disabled={isCreatingRecord || !recordFormData.title.trim() || !recordFormData.content.trim()}
               >
                 {isCreatingRecord ? '保存中...' : '記録を保存'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 写真アップロードモーダル */}
+      {showPhotoModal && (
+        <div className="modal-overlay" onClick={handleClosePhotoModal}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>写真を追加</h3>
+              <button
+                className="close-btn"
+                onClick={handleClosePhotoModal}
+                disabled={isCreatingRecord}
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="modal-body">
+              <div className="form-group">
+                <label htmlFor="photoUpload">写真を選択</label>
+                <input
+                  id="photoUpload"
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleImageSelect}
+                  disabled={isCreatingRecord}
+                  className="form-input"
+                />
+                <div className="form-helper-text">
+                  最大5MBまでの画像ファイル（JPG、PNG、GIF）を複数選択できます。
+                </div>
+              </div>
+
+              {imagePreviews.length > 0 && (
+                <div className="image-preview-container">
+                  <div className="image-preview-label">選択された写真 ({selectedImages.length}枚):</div>
+                  <div className="image-preview-grid">
+                    {imagePreviews.map((preview, index) => (
+                      <div key={index} className="image-preview-item">
+                        <img
+                          src={preview}
+                          alt={`プレビュー ${index + 1}`}
+                          className="image-preview"
+                        />
+                        <button
+                          type="button"
+                          className="image-remove-btn"
+                          onClick={() => handleRemoveImage(index)}
+                          disabled={isCreatingRecord}
+                        >
+                          ×
+                        </button>
+                        <div className="image-filename">
+                          {selectedImages[index]?.name}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="modal-footer">
+              <button
+                className="cancel-btn"
+                onClick={handleClosePhotoModal}
+                disabled={isCreatingRecord}
+              >
+                キャンセル
+              </button>
+              <button
+                className="save-btn"
+                onClick={handleCreatePhotoRecord}
+                disabled={isCreatingRecord || selectedImages.length === 0}
+              >
+                {isCreatingRecord ? '保存中...' : '写真を保存'}
               </button>
             </div>
           </div>
