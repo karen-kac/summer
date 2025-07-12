@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { UserProfile, ResearchTheme, ResearchProject, AuthState, LoginRequest, SignupRequest, User, Grade, Interest, Personality, Strength, Duration, Record, Schedule } from '../types';
-import { themeApi, ApiError } from '../services/api';
+import { themeApi, userApi, ApiError } from '../services/api';
 
 // ヘルパー関数: 研究ジャンルに応じたステップ数を返す
 const getStepCount = (genre: string): number => {
@@ -291,34 +291,36 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     try {
       console.log('Signing up with:', credentials);
 
-      // モックレスポンス
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // 実際のAPIを呼び出し
+      const response = await userApi.signup(credentials);
 
-      const mockProfile: UserProfile = {
-        grade: 'elementary4' as Grade,
-        interests: ['science', 'nature'] as Interest[],
-        personality: ['curious', 'patient'] as Personality[],
-        strengths: ['observation', 'writing'] as Strength[],
-        duration: '2weeks' as Duration
+      // APIレスポンスからユーザー情報を構築
+      const userProfile: UserProfile = {
+        grade: response.profile.grade,
+        interests: response.profile.interests,
+        personality: response.profile.personality,
+        strengths: response.profile.strengths,
+        duration: response.profile.preferredDuration
       };
 
-      const mockUser: User = {
-        id: 'user-' + Date.now(),
-        email: credentials.email,
-        name: credentials.name,
-        profile: mockProfile,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+      const user: User = {
+        id: response.profile.userId,
+        email: response.profile.email,
+        name: response.profile.displayName,
+        profile: userProfile,
+        createdAt: response.profile.createdAt,
+        updatedAt: response.profile.updatedAt
       };
 
       setAuthState({
         isAuthenticated: true,
-        user: mockUser,
-        token: 'mock-token-' + Date.now(),
+        user: user,
+        token: `token-${user.id}`,
         isLoading: false
       });
-      setUserProfile(mockProfile);
+      setUserProfile(userProfile);
     } catch (error) {
+      console.error('Signup error:', error);
       setAuthError('アカウント作成に失敗しました。しばらく時間をおいて再度お試しください。');
       setAuthState(prev => ({ ...prev, isLoading: false }));
     }

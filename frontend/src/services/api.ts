@@ -1,4 +1,4 @@
-import { UserProfile, ResearchTheme, GeneratePlanRequest, GeneratePlanResponse, GetSavedThemeResponse, GetResearchPlanResponse } from '../types';
+import { UserProfile, ResearchTheme, GeneratePlanRequest, GeneratePlanResponse, GetSavedThemeResponse, GetResearchPlanResponse, SignupRequest, LoginRequest, User } from '../types';
 
 // APIの基本設定
 const API_BASE_URL = 'http://127.0.0.1:8000';
@@ -17,6 +17,19 @@ export interface SaveThemeResponse {
 export interface SaveThemeRequest {
   theme: ResearchTheme;
   user_profile?: UserProfile;
+}
+
+// ユーザー関連レスポンス型
+export interface SignupResponse {
+  profile: any;
+  settings: any;
+  stats: any;
+}
+
+export interface LoginResponse {
+  access_token: string;
+  token_type: string;
+  user: SignupResponse;
 }
 
 // APIエラー型
@@ -136,11 +149,52 @@ class ThemeApi {
   }
 }
 
+// ユーザーAPI
+class UserApi {
+  constructor(private client: ApiClient) {}
+
+  /**
+   * 新規会員登録
+   */
+  async signup(credentials: SignupRequest): Promise<SignupResponse> {
+    // バックエンドの期待するフォーマットに変換
+    const requestData = {
+      email: credentials.email,
+      displayName: credentials.name,
+      // デフォルト値を設定（実際の実装では適切な値を設定する）
+      grade: 'elementary4',
+      interests: ['science', 'nature'],
+      personality: ['curious', 'patient'],
+      strengths: ['observation', 'writing'],
+      preferredDuration: '2weeks',
+      parentEmail: null
+    };
+
+    return this.client.post<SignupResponse>('/user/signup', requestData);
+  }
+
+    /**
+   * ログイン
+   */
+  async login(credentials: LoginRequest): Promise<LoginResponse> {
+    return this.client.post<LoginResponse>('/user/login', credentials);
+  }
+
+  /**
+   * ユーザープロフィール取得
+   */
+  async getUserProfile(userId: string): Promise<SignupResponse> {
+    return this.client.get<SignupResponse>(`/user/profile/${userId}`);
+  }
+}
+
 // API インスタンス
 const apiClient = new ApiClient();
 export const themeApi = new ThemeApi(apiClient);
+export const userApi = new UserApi(apiClient);
 
 // デフォルトエクスポート
 export default {
   theme: themeApi,
+  user: userApi,
 };
