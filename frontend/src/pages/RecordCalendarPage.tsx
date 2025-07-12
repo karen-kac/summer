@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Record, ResearchProject, Schedule } from '../types';
+import { useApp } from '../context/AppContext';
 import '../styles/RecordCalendar.css';
 import '../styles/Common.css';
 
@@ -30,6 +31,31 @@ const RecordCalendarPage: React.FC<RecordCalendarPageProps> = ({
   onAddRecord,
   onViewRecord
 }) => {
+  const { loadUserRecords } = useApp();
+
+  // 記録データの読み込み状況をログ出力
+  console.log('📅 RecordCalendarPage表示:', {
+    recordsCount: records.length,
+    schedulesCount: schedules.length,
+    activeProjectsCount: activeProjects.length,
+    records: records.map(r => ({
+      id: r.id,
+      title: r.title,
+      recordType: r.recordType,
+      recordDate: r.recordDate,
+      hasImages: !!(r.data?.images && r.data.images.length > 0),
+      imageCount: r.data?.images?.length || 0,
+      dataStructure: r.data ? Object.keys(r.data) : [],
+      fullData: r.data, // データ全体を確認
+      fullRecord: r // 記録全体を確認
+    }))
+  });
+
+  // ページ表示時に記録データを再読み込み
+  useEffect(() => {
+    console.log('🔄 記録カレンダーページで記録データを再読み込み中...');
+    loadUserRecords();
+  }, [loadUserRecords]);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [showRecordModal, setShowRecordModal] = useState(false);
@@ -167,28 +193,55 @@ const RecordCalendarPage: React.FC<RecordCalendarPageProps> = ({
     setShowRecordDetail(false);
   };
 
-  // Base64画像のデータURIを生成
+    // Base64画像のデータURIを生成
   const getImageDataUri = (image: any) => {
-    console.log('🖼️ 画像データURI生成:', {
-      hasBase64Data: !!image.base64Data,
-      hasContentType: !!image.contentType,
-      contentType: image.contentType,
-      base64Length: image.base64Data?.length || 0,
-      filename: image.filename
+    console.log('🖼️ 画像データURI生成開始:', {
+      imageObject: image,
+      imageType: typeof image,
+      imageKeys: image ? Object.keys(image) : [],
+      hasBase64Data: !!image?.base64Data,
+      hasContentType: !!image?.contentType,
+      contentType: image?.contentType,
+      base64Length: image?.base64Data?.length || 0,
+      filename: image?.filename,
+      base64Sample: image?.base64Data ? image.base64Data.substring(0, 50) + '...' : 'なし'
     });
 
-    if (!image.base64Data || !image.contentType) {
-      console.warn('⚠️ 画像データが不完全です:', image);
+    // より詳細な検証
+    if (!image) {
+      console.error('❌ 画像オブジェクトがnullまたはundefinedです');
       return null;
     }
 
-    const dataUri = `data:${image.contentType};base64,${image.base64Data}`;
-    console.log('✅ データURI生成成功:', {
-      contentType: image.contentType,
-      dataUriLength: dataUri.length
-    });
+    if (!image.base64Data) {
+      console.error('❌ base64Dataが存在しません:', {
+        imageProperties: Object.keys(image),
+        imageValues: image
+      });
+      return null;
+    }
 
-    return dataUri;
+    if (!image.contentType) {
+      console.error('❌ contentTypeが存在しません:', {
+        imageProperties: Object.keys(image),
+        imageValues: image
+      });
+      return null;
+    }
+
+    try {
+      const dataUri = `data:${image.contentType};base64,${image.base64Data}`;
+      console.log('✅ データURI生成成功:', {
+        contentType: image.contentType,
+        dataUriLength: dataUri.length,
+        dataUriStart: dataUri.substring(0, 100) + '...'
+      });
+
+      return dataUri;
+    } catch (error) {
+      console.error('❌ データURI生成でエラー:', error);
+      return null;
+    }
   };
 
   // 画像拡大表示を開く
@@ -228,6 +281,24 @@ const RecordCalendarPage: React.FC<RecordCalendarPageProps> = ({
           ← 戻る
         </button>
         <h1 className="page-title">📅 記録カレンダー</h1>
+        <button
+          className="reload-btn"
+          onClick={() => {
+            console.log('🔄 手動で記録データを再読み込み');
+            loadUserRecords();
+          }}
+          style={{
+            padding: '8px 16px',
+            background: '#2196f3',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontSize: '12px'
+          }}
+        >
+          🔄 記録再読み込み
+        </button>
       </div>
 
       <div className="calendar-container">
@@ -345,14 +416,35 @@ const RecordCalendarPage: React.FC<RecordCalendarPageProps> = ({
                         {record.data?.images && record.data.images.length > 0 && (
                           <div className="record-image-preview">
                             {record.data.images.slice(0, 3).map((image: any, index: number) => {
+                              console.log(`🖼️ プレビュー画像${index + 1}をレンダリング中:`, {
+                                recordTitle: record.title,
+                                image: image,
+                                imageIndex: index
+                              });
+
                               const imageUri = getImageDataUri(image);
-                              if (!imageUri) return null;
+                              console.log(`🔗 生成されたURI:`, imageUri ? `${imageUri.substring(0, 50)}...` : 'null');
+
+                              if (!imageUri) {
+                                console.warn(`⚠️ 画像${index + 1}のURIが生成できませんでした`);
+                                return null;
+                              }
+
                               return (
                                 <div key={index} className="record-preview-image">
                                   <img
                                     src={imageUri}
                                     alt={`プレビュー ${index + 1}`}
                                     className="record-preview-img"
+                                    onLoad={() => console.log(`✅ プレビュー画像${index + 1}の読み込み成功`)}
+                                    onError={(e) => {
+                                      console.error(`❌ プレビュー画像${index + 1}の読み込み失敗:`, e);
+                                      console.error('エラー詳細:', {
+                                        src: imageUri,
+                                        image: image,
+                                        target: e.target
+                                      });
+                                    }}
                                   />
                                 </div>
                               );
@@ -507,8 +599,24 @@ const RecordCalendarPage: React.FC<RecordCalendarPageProps> = ({
                     <h5>写真 ({selectedRecord.data.images.length}枚)</h5>
                     <div className="record-images-grid">
                       {selectedRecord.data.images.map((image: any, index: number) => {
+                        console.log(`🖼️ 詳細画像${index + 1}をレンダリング中:`, {
+                          recordTitle: selectedRecord.title,
+                          image: image,
+                          imageIndex: index
+                        });
+
                         const imageUri = getImageDataUri(image);
-                        if (!imageUri) return null;
+                        console.log(`🔗 詳細画像URI:`, imageUri ? `${imageUri.substring(0, 50)}...` : 'null');
+
+                        if (!imageUri) {
+                          console.warn(`⚠️ 詳細画像${index + 1}のURIが生成できませんでした`);
+                          return (
+                            <div key={index} className="record-image-item error">
+                              <div className="image-error">画像を読み込めません</div>
+                              <div className="record-image-filename">{image.filename || `画像${index + 1}`}</div>
+                            </div>
+                          );
+                        }
 
                         return (
                           <div key={index} className="record-image-item">
@@ -517,6 +625,15 @@ const RecordCalendarPage: React.FC<RecordCalendarPageProps> = ({
                               alt={`記録画像 ${index + 1}`}
                               className="record-detail-image"
                               onClick={() => handleOpenImageModal(index)}
+                              onLoad={() => console.log(`✅ 詳細画像${index + 1}の読み込み成功`)}
+                              onError={(e) => {
+                                console.error(`❌ 詳細画像${index + 1}の読み込み失敗:`, e);
+                                console.error('詳細エラー:', {
+                                  src: imageUri,
+                                  image: image,
+                                  target: e.target
+                                });
+                              }}
                             />
                             <div className="record-image-filename">{image.filename || `画像${index + 1}`}</div>
                           </div>

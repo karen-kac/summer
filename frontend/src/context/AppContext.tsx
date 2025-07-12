@@ -275,7 +275,17 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         recordsCount: response.records.length,
         firstRecord: response.records[0],
         firstRecordMedia: response.records[0]?.media,
-        hasMore: response.hasMore
+        hasMore: response.hasMore,
+        // すべての記録を詳しく確認
+        allRecords: response.records.map((record, i) => ({
+          index: i,
+          title: record.record?.title,
+          recordType: record.record?.recordType,
+          hasMedia: !!record.media,
+          mediaCount: record.media?.length || 0,
+          mediaStructure: record.media?.[0] ? Object.keys(record.media[0]) : [],
+          record: record
+        }))
       });
 
       // APIレスポンスをRecord[]形式に変換
@@ -285,13 +295,27 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
           console.log(`📷 記録${index + 1}の画像データ:`, {
             recordTitle: apiRecord.record.title,
             mediaCount: apiRecord.media.length,
-            mediaData: apiRecord.media.map((media, i) => ({
-              filename: media.filename,
-              contentType: media.contentType,
-              size: media.size,
-              hasBase64: !!media.base64Data,
-              base64Length: media.base64Data?.length || 0
-            }))
+            rawMedia: apiRecord.media, // 生のメディアデータ
+            mediaData: apiRecord.media.map((media, i) => {
+              console.log(`画像${i + 1}の詳細:`, media);
+              return {
+                filename: media.filename,
+                contentType: media.contentType,
+                size: media.size,
+                hasBase64: !!media.base64Data,
+                base64Length: media.base64Data?.length || 0,
+                base64Sample: media.base64Data ? media.base64Data.substring(0, 50) + '...' : null,
+                fullMediaObject: media
+              };
+            })
+          });
+        } else {
+          // メディアがない場合もログ出力
+          console.log(`📋 記録${index + 1}にはメディアがありません:`, {
+            recordTitle: apiRecord.record.title,
+            recordType: apiRecord.record.recordType,
+            hasMediaProperty: 'media' in apiRecord,
+            mediaValue: apiRecord.media
           });
         }
 
@@ -315,12 +339,26 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         };
       });
 
-      setRecords(transformedRecords);
+            setRecords(transformedRecords);
       console.log(`✅ ${transformedRecords.length}件の記録を読み込みました`);
 
       // 画像がある記録の数を確認
       const recordsWithImages = transformedRecords.filter(r => r.data?.images && r.data.images.length > 0);
       console.log(`📷 画像付き記録: ${recordsWithImages.length}件`);
+
+      // 変換後の記録データ構造を確認
+      recordsWithImages.forEach((record, index) => {
+        console.log(`🔍 変換後の画像付き記録${index + 1}:`, {
+          recordId: record.id,
+          title: record.title,
+          recordType: record.recordType,
+          dataStructure: Object.keys(record.data || {}),
+          imagesArray: record.data?.images,
+          imageCount: record.data?.images?.length || 0,
+          firstImageStructure: record.data?.images?.[0] ? Object.keys(record.data.images[0]) : [],
+          firstImageData: record.data?.images?.[0]
+        });
+      });
 
     } catch (error) {
       console.error('❌ 記録読み込みエラー:', error);

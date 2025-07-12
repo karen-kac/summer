@@ -423,12 +423,27 @@ const ActiveProjectPage: React.FC<ActiveProjectPageProps> = ({
       return;
     }
 
-    // ファイルサイズ制限（5MB）
-    const oversizedFiles = imageFiles.filter(file => file.size > 5 * 1024 * 1024);
+    // ファイルサイズ制限（2MB）
+    const maxSizeBytes = 2 * 1024 * 1024; // 2MB
+    const oversizedFiles = imageFiles.filter(file => file.size > maxSizeBytes);
     if (oversizedFiles.length > 0) {
-      alert('ファイルサイズは5MB以下にしてください。');
+      const oversizedInfo = oversizedFiles.map(f =>
+        `${f.name}: ${Math.round(f.size / 1024 / 1024 * 100) / 100}MB`
+      ).join('\n');
+      alert(`ファイルサイズは2MB以下にしてください。\n\n以下のファイルが大きすぎます:\n${oversizedInfo}`);
       return;
     }
+
+    // 詳細ログ
+    console.log('📷 画像選択:', {
+      selectedCount: imageFiles.length,
+      files: imageFiles.map(f => ({
+        name: f.name,
+        type: f.type,
+        sizeKB: Math.round(f.size / 1024),
+        sizeMB: Math.round(f.size / 1024 / 1024 * 100) / 100
+      }))
+    });
 
     setSelectedImages(prev => [...prev, ...imageFiles]);
 
@@ -497,14 +512,31 @@ const ActiveProjectPage: React.FC<ActiveProjectPageProps> = ({
     }));
   };
 
-  // 画像をBase64に変換する関数
+  // 画像をBase64に変換する関数（サイズ制限付き）
   const convertImageToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
+      // ファイルサイズチェック（2MB制限）
+      const maxSizeBytes = 2 * 1024 * 1024; // 2MB
+      if (file.size > maxSizeBytes) {
+        reject(new Error(`ファイルサイズが大きすぎます。最大2MBまでです。現在のサイズ: ${Math.round(file.size / 1024 / 1024 * 100) / 100}MB`));
+        return;
+      }
+
       const reader = new FileReader();
       reader.onload = () => {
         if (reader.result) {
           // data:image/jpeg;base64, の部分を除去してBase64文字列だけを取得
           const base64 = (reader.result as string).split(',')[1];
+
+          // Base64サイズもチェック
+          const base64SizeKB = Math.round(base64.length / 1024);
+          console.log('📷 Base64変換完了:', {
+            filename: file.name,
+            originalSizeKB: Math.round(file.size / 1024),
+            base64SizeKB: base64SizeKB,
+            base64Length: base64.length
+          });
+
           resolve(base64);
         } else {
           reject(new Error('ファイルの読み込みに失敗しました'));
@@ -570,11 +602,30 @@ const ActiveProjectPage: React.FC<ActiveProjectPageProps> = ({
       };
 
       console.log('🔄 記録作成中...', createRequest);
+      if (imageData.length > 0) {
+        console.log('📷 送信する画像データの詳細:', {
+          imageCount: imageData.length,
+          images: imageData.map((img, i) => ({
+            index: i,
+            filename: img.filename,
+            contentType: img.contentType,
+            size: img.size,
+            base64Length: img.base64Data.length,
+            base64Sample: img.base64Data.substring(0, 50) + '...'
+          }))
+        });
+      }
 
       // AWSに記録を保存
       const response = await recordApi.createRecord(authState.user.id, createRequest);
 
       console.log('✅ 記録作成成功:', response);
+      console.log('📷 作成された記録のメディア情報:', {
+        recordId: response.record?.recordId,
+        mediaCount: response.media?.length || 0,
+        mediaData: response.media || [],
+        fullResponse: response
+      });
 
       // 成功通知
       alert('記録が正常に保存されました！');
@@ -587,7 +638,22 @@ const ActiveProjectPage: React.FC<ActiveProjectPageProps> = ({
 
     } catch (error) {
       console.error('❌ 記録作成エラー:', error);
-      alert('記録の保存に失敗しました。もう一度お試しください。');
+
+      let errorMessage = '記録の保存に失敗しました。';
+
+      if (error instanceof Error) {
+        if (error.message.includes('ファイルサイズが大きすぎます')) {
+          errorMessage = error.message;
+        } else if (error.message.includes('Network')) {
+          errorMessage = 'ネットワークエラーが発生しました。インターネット接続を確認してください。';
+        } else if (error.message.includes('413') || error.message.includes('Payload Too Large')) {
+          errorMessage = '添付ファイルが大きすぎます。2MB以下の画像を選択してください。';
+        } else {
+          errorMessage = `エラー: ${error.message}`;
+        }
+      }
+
+      alert(errorMessage + '\n\nもう一度お試しください。');
     } finally {
       setIsCreatingRecord(false);
     }
@@ -648,11 +714,28 @@ const ActiveProjectPage: React.FC<ActiveProjectPageProps> = ({
       };
 
       console.log('🔄 写真記録作成中...', createRequest);
+      console.log('📷 送信する画像データの詳細:', {
+        imageCount: imageData.length,
+        images: imageData.map((img, i) => ({
+          index: i,
+          filename: img.filename,
+          contentType: img.contentType,
+          size: img.size,
+          base64Length: img.base64Data.length,
+          base64Sample: img.base64Data.substring(0, 50) + '...'
+        }))
+      });
 
       // AWSに記録を保存
       const response = await recordApi.createRecord(authState.user.id, createRequest);
 
       console.log('✅ 写真記録作成成功:', response);
+      console.log('📷 作成された記録のメディア情報:', {
+        recordId: response.record?.recordId,
+        mediaCount: response.media?.length || 0,
+        mediaData: response.media || [],
+        fullResponse: response
+      });
 
       // 成功通知
       alert('写真が正常に保存されました！');
@@ -665,7 +748,22 @@ const ActiveProjectPage: React.FC<ActiveProjectPageProps> = ({
 
     } catch (error) {
       console.error('❌ 写真記録作成エラー:', error);
-      alert('写真の保存に失敗しました。もう一度お試しください。');
+
+      let errorMessage = '写真の保存に失敗しました。';
+
+      if (error instanceof Error) {
+        if (error.message.includes('ファイルサイズが大きすぎます')) {
+          errorMessage = error.message;
+        } else if (error.message.includes('Network')) {
+          errorMessage = 'ネットワークエラーが発生しました。インターネット接続を確認してください。';
+        } else if (error.message.includes('413') || error.message.includes('Payload Too Large')) {
+          errorMessage = '画像ファイルが大きすぎます。2MB以下の画像を選択してください。';
+        } else {
+          errorMessage = `エラー: ${error.message}`;
+        }
+      }
+
+      alert(errorMessage + '\n\nもう一度お試しください。');
     } finally {
       setIsCreatingRecord(false);
     }
@@ -941,7 +1039,7 @@ const ActiveProjectPage: React.FC<ActiveProjectPageProps> = ({
                   className="form-input"
                 />
                 <div className="form-helper-text">
-                  最大5MBまでの画像ファイル（JPG、PNG、GIF）をアップロードできます。
+                  最大2MBまでの画像ファイル（JPG、PNG、GIF）をアップロードできます。
                 </div>
 
                 {imagePreviews.length > 0 && (
@@ -1022,7 +1120,7 @@ const ActiveProjectPage: React.FC<ActiveProjectPageProps> = ({
                   className="form-input"
                 />
                 <div className="form-helper-text">
-                  最大5MBまでの画像ファイル（JPG、PNG、GIF）を複数選択できます。
+                  最大2MBまでの画像ファイル（JPG、PNG、GIF）を複数選択できます。
                 </div>
               </div>
 

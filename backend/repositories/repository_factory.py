@@ -68,7 +68,10 @@ class RepositoryFactory:
     def get_record_repository(self) -> RecordRepository:
         """記録リポジトリを取得"""
         if self._record_repo is None:
-            self._record_repo = RecordRepository(self._get_db_client())
+            self._record_repo = RecordRepository(
+                db_client=self._get_db_client(),
+                s3_client=self._get_s3_client()
+            )
         return self._record_repo
 
     def get_media_repository(self) -> MediaRepository:

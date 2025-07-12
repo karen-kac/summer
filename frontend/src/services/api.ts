@@ -255,7 +255,66 @@ class RecordApi {
    * 新しい記録を作成する
    */
   async createRecord(userId: string, request: CreateRecordRequest): Promise<CreateRecordResponse> {
-    return this.client.post<CreateRecordResponse>(`/record/create?user_id=${userId}`, request);
+    // リクエストデータのサイズを計算
+    const requestString = JSON.stringify(request);
+    const requestSizeKB = Math.round(requestString.length / 1024);
+
+    console.log('🌐 API記録作成リクエスト:', {
+      userId: userId,
+      endpoint: `/record/create?user_id=${userId}`,
+      requestSizeKB: requestSizeKB,
+      requestSizeMB: Math.round(requestSizeKB / 1024 * 100) / 100,
+      requestData: {
+        ...request,
+        data: {
+          ...request.data,
+          images: request.data?.images?.map((img: any, i: number) => ({
+            index: i,
+            filename: img.filename,
+            contentType: img.contentType,
+            size: img.size,
+            hasBase64: !!img.base64Data,
+            base64Length: img.base64Data?.length || 0,
+            base64SizeKB: Math.round((img.base64Data?.length || 0) / 1024)
+          })) || []
+        }
+      }
+    });
+
+    // 大きすぎる場合は警告
+    if (requestSizeKB > 5000) { // 5MB以上
+      console.warn('⚠️ リクエストサイズが大きすぎます:', {
+        sizeKB: requestSizeKB,
+        sizeMB: Math.round(requestSizeKB / 1024 * 100) / 100,
+        recommendation: '画像サイズを小さくしてください'
+      });
+    }
+
+        try {
+      const response = await this.client.post<CreateRecordResponse>(`/record/create?user_id=${userId}`, request);
+
+      console.log('🌐 API記録作成レスポンス:', {
+        success: !!response,
+        recordId: response.record?.recordId,
+        mediaCount: response.media?.length || 0,
+        hasMedia: !!response.media && response.media.length > 0,
+        response: response
+      });
+
+      return response;
+    } catch (error) {
+      console.error('❌ API記録作成エラー:', {
+        error: error,
+        errorMessage: error instanceof Error ? error.message : 'Unknown error',
+        errorType: typeof error,
+        isApiError: error instanceof ApiError,
+        apiErrorStatus: error instanceof ApiError ? error.status : undefined,
+        apiErrorData: error instanceof ApiError ? error.data : undefined
+      });
+
+      // エラーを再投げ
+      throw error;
+    }
   }
 
   /**
@@ -283,7 +342,31 @@ class RecordApi {
     const queryString = params.toString();
     const endpoint = `/record/user/${userId}${queryString ? `?${queryString}` : ''}`;
 
-    return this.client.get<RecordListResponse>(endpoint);
+    console.log('🌐 API記録取得リクエスト:', {
+      userId: userId,
+      endpoint: endpoint,
+      limit: limit,
+      nextToken: nextToken
+    });
+
+    const response = await this.client.get<RecordListResponse>(endpoint);
+
+    console.log('🌐 API記録取得レスポンス:', {
+      recordsCount: response.records?.length || 0,
+      hasMore: response.hasMore,
+      total: response.total,
+      recordsWithMedia: response.records?.filter((r: any) => r.media && r.media.length > 0).length || 0,
+      mediaDetails: response.records?.map((record: any, i: number) => ({
+        index: i,
+        recordId: record.record?.recordId,
+        title: record.record?.title,
+        recordType: record.record?.recordType,
+        hasMedia: !!record.media && record.media.length > 0,
+        mediaCount: record.media?.length || 0
+      })) || []
+    });
+
+    return response;
   }
 
   /**

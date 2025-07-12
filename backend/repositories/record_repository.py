@@ -1,12 +1,16 @@
 from typing import Optional, List, Dict, Any
 from datetime import datetime, date
 from repositories.client.dynamodb_client import DynamoDBClient
+from repositories.client.s3_client import S3Client
 from models.record import (
-    Record, Experiment, Notification, Report, AIAnalysis,
+    Record, Experiment, Notification, Report, AIAnalysis, Media,
     CreateRecordRequest, UpdateRecordRequest, RecordResponse, RecordListResponse
 )
 from models.database import KeyBuilder
 import logging
+import base64
+import uuid
+import io
 
 logger = logging.getLogger(__name__)
 
@@ -14,8 +18,9 @@ logger = logging.getLogger(__name__)
 class RecordRepository:
     """研究記録データリポジトリ"""
 
-    def __init__(self, db_client: DynamoDBClient):
+    def __init__(self, db_client: DynamoDBClient, s3_client: S3Client = None):
         self.db = db_client
+        self.s3 = s3_client
 
     async def create_record(self, user_id: str, request: CreateRecordRequest) -> Optional[RecordResponse]:
         """
@@ -29,6 +34,22 @@ class RecordRepository:
             RecordResponse: 作成された記録情報
         """
         try:
+            logger.info(f"📋 記録作成開始: ユーザー={user_id}, プロジェクト={request.projectId}")
+
+            # リクエストデータのログ
+            logger.info(f"📋 リクエストデータ: {request.data}")
+            if request.data and 'images' in request.data:
+                images = request.data['images']
+                logger.info(f"📷 画像データ検出: {len(images) if isinstance(images, list) else 0}件")
+                if isinstance(images, list):
+                    for i, img in enumerate(images):
+                        logger.info(f"📷 画像{i+1}: {img.keys() if isinstance(img, dict) else type(img)}")
+                        if isinstance(img, dict) and 'base64Data' in img:
+                            logger.info(f"📷 画像{i+1} Base64データ長: {len(img['base64Data'])}")
+
+            # S3クライアントの確認
+            logger.info(f"🔧 S3クライアント: {self.s3 is not None}")
+
             # シーケンス番号を生成（同じ日付内での連番）
             sequence = datetime.now().strftime("%H%M%S")
 
@@ -49,18 +70,212 @@ class RecordRepository:
                 locationInfo=request.locationInfo
             )
 
+            logger.info(f"📋 記録オブジェクト作成: {record.recordId}")
+
+            # 画像データを処理
+            media_list = []
+            if request.data and 'images' in request.data and self.s3:
+                images = request.data['images']
+                logger.info(f"📷 画像処理開始: {images}")
+
+                if isinstance(images, list) and len(images) > 0:
+                    logger.info(f"📷 画像データを処理中: {len(images)}件")
+
+                    for i, image_data in enumerate(images):
+                        logger.info(f"📷 画像{i+1}処理開始: {image_data}")
+                        try:
+                            # Base64画像データをS3に保存
+                            media = await self._save_image_to_s3(
+                                user_id=user_id,
+                                project_id=request.projectId,
+                                record_id=record.recordId,
+                                image_data=image_data,
+                                sequence=i + 1
+                            )
+
+                            if media:
+                                media_list.append(media)
+                                # 記録にメディアIDを追加
+                                record.mediaIds.append(media.mediaId)
+                                logger.info(f"📷 画像保存成功: {media.mediaId}")
+                            else:
+                                logger.error(f"📷 画像保存失敗: インデックス {i}")
+                        except Exception as e:
+                            logger.error(f"📷 画像処理エラー (インデックス {i}): {e}")
+                            logger.error(f"📷 画像データ: {image_data}")
+                            continue
+                else:
+                    logger.warning(f"📷 画像データが無効: {type(images)}, {images}")
+            elif not self.s3:
+                logger.error("📷 S3クライアントが設定されていません")
+            else:
+                logger.info("📷 画像データなし")
+
+            logger.info(f"📋 画像処理完了: {len(media_list)}件のメディア作成")
+
+            # 記録をDynamoDBに保存
+            logger.info(f"📋 記録をDynamoDBに保存中...")
             success = await self.db.put_item(record.to_dynamo_item())
 
             if success:
-                logger.info(f"記録作成成功: {record.recordId}")
-                return RecordResponse(record=record)
+                logger.info(f"📋 記録作成成功: {record.recordId}, メディア: {len(media_list)}件")
+                response = RecordResponse(record=record, media=media_list)
+                logger.info(f"📋 レスポンス: record={response.record.recordId}, media_count={len(response.media)}")
+                return response
             else:
-                logger.error(f"記録作成失敗: {record.recordId}")
+                logger.error(f"📋 記録作成失敗: {record.recordId}")
                 return None
 
         except Exception as e:
-            logger.error(f"記録作成エラー: {e}")
+            logger.error(f"📋 記録作成エラー: {e}")
+            logger.error(f"📋 エラー詳細: {str(e)}")
+            import traceback
+            logger.error(f"📋 トレースバック: {traceback.format_exc()}")
             return None
+
+    async def _save_image_to_s3(self, user_id: str, project_id: str, record_id: str,
+                               image_data: Dict[str, Any], sequence: int) -> Optional[Media]:
+        """
+        画像データをS3に保存してMediaオブジェクトを作成
+
+        Args:
+            user_id: ユーザーID
+            project_id: プロジェクトID
+            record_id: 記録ID
+            image_data: 画像データ（Base64とメタデータ）
+            sequence: 画像のシーケンス番号
+
+        Returns:
+            Media: 作成されたメディアオブジェクト
+        """
+        try:
+            logger.info(f"📷 S3保存開始: ユーザー={user_id}, プロジェクト={project_id}, 記録={record_id}, シーケンス={sequence}")
+
+            # 画像データの検証
+            if not image_data or 'base64Data' not in image_data:
+                logger.error(f"📷 画像データが無効です: {image_data}")
+                return None
+
+            base64_data = image_data['base64Data']
+            filename = image_data.get('filename', f'image_{sequence}.jpg')
+            content_type = image_data.get('contentType', 'image/jpeg')
+            file_size = image_data.get('size', 0)
+
+            logger.info(f"📷 画像メタデータ: filename={filename}, contentType={content_type}, size={file_size}")
+
+            # Base64データをデコード
+            try:
+                image_bytes = base64.b64decode(base64_data)
+                logger.info(f"📷 Base64デコード成功: {len(image_bytes)} バイト")
+            except Exception as e:
+                logger.error(f"📷 Base64デコードエラー: {e}")
+                return None
+
+            # S3キーを生成
+            media_id = str(uuid.uuid4())
+            file_extension = filename.split('.')[-1] if '.' in filename else 'jpg'
+            s3_key = f"media/{user_id}/{project_id}/{record_id}/{media_id}.{file_extension}"
+
+            logger.info(f"📷 S3キー生成: {s3_key}, メディアID={media_id}")
+
+            # S3にアップロード
+            logger.info(f"📷 S3アップロード開始: {len(image_bytes)} バイト")
+            upload_success = await self.s3.upload_object(
+                data=image_bytes,
+                s3_key=s3_key,
+                content_type=content_type,
+                metadata={
+                    'user_id': user_id,
+                    'project_id': project_id,
+                    'record_id': record_id,
+                    'original_filename': filename
+                }
+            )
+
+            logger.info(f"📷 S3アップロード結果: {upload_success}")
+
+            if not upload_success:
+                logger.error(f"📷 S3アップロード失敗: {s3_key}")
+                return None
+
+            # Mediaオブジェクトを作成
+            logger.info(f"📷 Mediaオブジェクト作成中...")
+            media = Media.create(
+                media_id=media_id,
+                user_id=user_id,
+                project_id=project_id,
+                recordId=record_id,
+                mediaType='image',
+                fileName=filename,
+                s3Key=s3_key,
+                s3Bucket=self.s3.bucket_name,
+                fileSize=file_size or len(image_bytes),
+                mimeType=content_type,
+                processingStatus='completed'
+            )
+
+            logger.info(f"📷 Mediaオブジェクト作成成功: {media.mediaId}")
+
+            # DynamoDBに保存
+            logger.info(f"📷 MediaをDynamoDBに保存中...")
+            db_success = await self.db.put_item(media.to_dynamo_item())
+
+            logger.info(f"📷 MediaのDynamoDB保存結果: {db_success}")
+
+            if db_success:
+                logger.info(f"📷 メディア作成成功: {media_id}")
+                return media
+            else:
+                logger.error(f"📷 メディアDB保存失敗: {media_id}")
+                # S3からファイルを削除
+                logger.info(f"📷 S3からファイルを削除中: {s3_key}")
+                await self.s3.delete_object(s3_key)
+                return None
+
+        except Exception as e:
+            logger.error(f"📷 画像保存エラー: {e}")
+            logger.error(f"📷 エラー詳細: {str(e)}")
+            import traceback
+            logger.error(f"📷 トレースバック: {traceback.format_exc()}")
+            return None
+
+    async def _get_media_with_urls(self, media_ids: List[str]) -> List[Media]:
+        """
+        メディアIDリストから署名付きURLを持つメディアオブジェクトを取得
+
+        Args:
+            media_ids: メディアIDのリスト
+
+        Returns:
+            List[Media]: 署名付きURLを持つメディアオブジェクトのリスト
+        """
+        media_list = []
+        for media_id in media_ids:
+            try:
+                media_item = await self.db.get_item(
+                    pk=KeyBuilder.media_pk(media_id),
+                    sk="METADATA"
+                )
+                if media_item:
+                    media = Media(**media_item)
+
+                    # 署名付きダウンロードURLを生成
+                    if self.s3:
+                        download_url = await self.s3.generate_presigned_download_url(
+                            s3_key=media.s3Key,
+                            expires_in=3600  # 1時間有効
+                        )
+                        # メディアオブジェクトに一時的にURLを追加
+                        media_dict = media.model_dump()
+                        media_dict['downloadUrl'] = download_url
+                        media_list.append(media_dict)
+                    else:
+                        media_list.append(media)
+            except Exception as e:
+                logger.warning(f"メディア取得エラー (ID: {media_id}): {e}")
+                continue
+
+        return media_list
 
     async def get_record_by_id(self, project_id: str, record_date: date, sequence: str) -> Optional[RecordResponse]:
         """
@@ -83,7 +298,13 @@ class RecordRepository:
 
             if item:
                 record = Record(**item)
-                return RecordResponse(record=record)
+
+                # 関連するメディアを取得（署名付きURL付き）
+                media_list = []
+                if record.mediaIds:
+                    media_list = await self._get_media_with_urls(record.mediaIds)
+
+                return RecordResponse(record=record, media=media_list)
             else:
                 return None
 
@@ -117,7 +338,13 @@ class RecordRepository:
             for item in result['items']:
                 try:
                     record = Record(**item)
-                    records.append(RecordResponse(record=record))
+
+                    # 関連するメディアを取得（署名付きURL付き）
+                    media_list = []
+                    if record.mediaIds:
+                        media_list = await self._get_media_with_urls(record.mediaIds)
+
+                    records.append(RecordResponse(record=record, media=media_list))
                 except Exception as e:
                     logger.warning(f"記録データの変換でエラー: {e}")
                     continue
@@ -161,7 +388,13 @@ class RecordRepository:
             for item in result['items']:
                 try:
                     record = Record(**item)
-                    records.append(RecordResponse(record=record))
+
+                    # 関連するメディアを取得（署名付きURL付き）
+                    media_list = []
+                    if record.mediaIds:
+                        media_list = await self._get_media_with_urls(record.mediaIds)
+
+                    records.append(RecordResponse(record=record, media=media_list))
                 except Exception as e:
                     logger.warning(f"記録データの変換でエラー: {e}")
                     continue
@@ -206,7 +439,13 @@ class RecordRepository:
             for item in result['items']:
                 try:
                     record = Record(**item)
-                    records.append(RecordResponse(record=record))
+
+                    # 関連するメディアを取得（署名付きURL付き）
+                    media_list = []
+                    if record.mediaIds:
+                        media_list = await self._get_media_with_urls(record.mediaIds)
+
+                    records.append(RecordResponse(record=record, media=media_list))
                 except Exception as e:
                     logger.warning(f"記録データの変換でエラー: {e}")
                     continue
