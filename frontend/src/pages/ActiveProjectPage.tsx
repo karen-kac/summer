@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { ResearchProject, ResearchStep, Genre, AIResearchStep } from '../types';
-import { themeApi } from '../services/api';
+import { ResearchProject, ResearchStep, Genre, AIResearchStep, CreateRecordRequest } from '../types';
+import { themeApi, recordApi } from '../services/api';
+import { useApp } from '../context/AppContext';
 import '../styles/Common.css';
 import '../styles/Components.css';
 import '../styles/ActiveProject.css';
@@ -29,6 +30,21 @@ const ActiveProjectPage: React.FC<ActiveProjectPageProps> = ({
   const [planError, setPlanError] = useState<string | null>(null);
   const [isUsingAIPlan, setIsUsingAIPlan] = useState(false);
   const [planStatus, setPlanStatus] = useState<'cached' | 'generated' | 'default' | null>(null);
+
+  // 記録フォーム関連の状態
+  const [showRecordModal, setShowRecordModal] = useState(false);
+  const [isCreatingRecord, setIsCreatingRecord] = useState(false);
+  const [recordFormData, setRecordFormData] = useState({
+    title: '',
+    content: '',
+    recordType: 'note' as const,
+    tags: [] as string[],
+    weatherInfo: null as any,
+    locationInfo: null as any
+  });
+
+  // AppContextからユーザー情報を取得
+  const { authState } = useApp();
 
   // AIが生成したステップをStepTemplateに変換
   const convertAIStepsToTemplate = (aiSteps: AIResearchStep[]): StepTemplate[] => {
@@ -392,6 +408,89 @@ const ActiveProjectPage: React.FC<ActiveProjectPageProps> = ({
     setCurrentStepIndex(stepIndex);
   };
 
+  // 記録モーダルを開く
+  const handleOpenRecordModal = () => {
+    // フォームをリセット
+    setRecordFormData({
+      title: '',
+      content: '',
+      recordType: 'note',
+      tags: [],
+      weatherInfo: null,
+      locationInfo: null
+    });
+    setShowRecordModal(true);
+  };
+
+  // 記録モーダルを閉じる
+  const handleCloseRecordModal = () => {
+    setShowRecordModal(false);
+  };
+
+  // 記録フォームデータの更新
+  const handleRecordFormChange = (field: string, value: any) => {
+    setRecordFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  // 記録を作成
+  const handleCreateRecord = async () => {
+    if (!authState.user?.id) {
+      alert('ユーザーが認証されていません。再度ログインしてください。');
+      return;
+    }
+
+    if (!recordFormData.title.trim() || !recordFormData.content.trim()) {
+      alert('タイトルと内容を入力してください。');
+      return;
+    }
+
+    setIsCreatingRecord(true);
+
+    try {
+      const currentStep = projectSteps[currentStepIndex];
+
+      const createRequest: CreateRecordRequest = {
+        projectId: project.id,
+        stepId: `step-${currentStepIndex + 1}`,
+        recordType: recordFormData.recordType,
+        title: recordFormData.title,
+        content: recordFormData.content,
+        recordDate: new Date().toISOString().split('T')[0],
+        recordTime: new Date().toTimeString().split(' ')[0].slice(0, 5),
+        data: {
+          stepName: currentStep?.title || '',
+          stepIndex: currentStepIndex,
+          projectGenre: project.genre
+        },
+        tags: recordFormData.tags,
+        weatherInfo: recordFormData.weatherInfo,
+        locationInfo: recordFormData.locationInfo
+      };
+
+      console.log('🔄 記録作成中...', createRequest);
+
+      // AWSに記録を保存
+      const response = await recordApi.createRecord(authState.user.id, createRequest);
+
+      console.log('✅ 記録作成成功:', response);
+
+      // 成功通知
+      // alert('記録が正常に保存されました！');
+
+      // モーダルを閉じる
+      handleCloseRecordModal();
+
+    } catch (error) {
+      console.error('❌ 記録作成エラー:', error);
+      alert('記録の保存に失敗しました。もう一度お試しください。');
+    } finally {
+      setIsCreatingRecord(false);
+    }
+  };
+
   const getGenreDisplayName = (genre: Genre) => {
     const genreMap = {
       'experiment': '実験型',
@@ -561,8 +660,8 @@ const ActiveProjectPage: React.FC<ActiveProjectPageProps> = ({
               )}
 
               <div className="secondary-actions">
-                <button className="secondary-btn">
-                  📝 メモを記録
+                <button className="secondary-btn" onClick={handleOpenRecordModal}>
+                  📝 記録する
                 </button>
                 <button className="secondary-btn">
                   📷 写真を追加
@@ -575,6 +674,101 @@ const ActiveProjectPage: React.FC<ActiveProjectPageProps> = ({
           </div>
         </div>
       </div>
+
+      {/* 記録作成モーダル */}
+      {showRecordModal && (
+        <div className="modal-overlay" onClick={handleCloseRecordModal}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>研究記録を作成</h3>
+              <button
+                className="close-btn"
+                onClick={handleCloseRecordModal}
+                disabled={isCreatingRecord}
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="modal-body">
+              <div className="form-group">
+                <label htmlFor="recordType">記録の種類</label>
+                <select
+                  id="recordType"
+                  value={recordFormData.recordType}
+                  onChange={(e) => handleRecordFormChange('recordType', e.target.value)}
+                  disabled={isCreatingRecord}
+                  className="form-select"
+                >
+                  <option value="note">メモ</option>
+                  <option value="observation">観察記録</option>
+                  <option value="experiment">実験記録</option>
+                  <option value="data">データ記録</option>
+                  <option value="photo">写真記録</option>
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="recordTitle">タイトル</label>
+                <input
+                  id="recordTitle"
+                  type="text"
+                  value={recordFormData.title}
+                  onChange={(e) => handleRecordFormChange('title', e.target.value)}
+                  placeholder="記録のタイトルを入力してください"
+                  disabled={isCreatingRecord}
+                  className="form-input"
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="recordContent">内容</label>
+                <textarea
+                  id="recordContent"
+                  value={recordFormData.content}
+                  onChange={(e) => handleRecordFormChange('content', e.target.value)}
+                  placeholder="観察した内容、実験の結果、感想などを詳しく記録してください"
+                  disabled={isCreatingRecord}
+                  className="form-textarea"
+                  rows={6}
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="recordTags">タグ（任意）</label>
+                <input
+                  id="recordTags"
+                  type="text"
+                  placeholder="カンマ区切りでタグを入力 (例: 観察, 植物, 成長)"
+                  disabled={isCreatingRecord}
+                  className="form-input"
+                  onChange={(e) => {
+                    const tags = e.target.value.split(',').map(tag => tag.trim()).filter(tag => tag);
+                    handleRecordFormChange('tags', tags);
+                  }}
+                />
+              </div>
+            </div>
+
+            <div className="modal-footer">
+              <button
+                className="cancel-btn"
+                onClick={handleCloseRecordModal}
+                disabled={isCreatingRecord}
+              >
+                キャンセル
+              </button>
+              <button
+                className="save-btn"
+                onClick={handleCreateRecord}
+                disabled={isCreatingRecord || !recordFormData.title.trim() || !recordFormData.content.trim()}
+              >
+                {isCreatingRecord ? '保存中...' : '記録を保存'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -364,6 +364,10 @@ export interface CreateRecordRequest {
   content: string;
   data?: { [key: string]: any };
   recordDate?: string;
+  recordTime?: string;
+  tags?: string[];
+  weatherInfo?: { [key: string]: any };
+  locationInfo?: { [key: string]: any };
 }
 
 // ダッシュボード用の集約データ型

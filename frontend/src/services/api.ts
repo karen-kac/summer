@@ -1,4 +1,4 @@
-import { UserProfile, ResearchTheme, GeneratePlanRequest, GeneratePlanResponse, GetSavedThemeResponse, GetResearchPlanResponse, SignupRequest, LoginRequest, User } from '../types';
+import { UserProfile, ResearchTheme, GeneratePlanRequest, GeneratePlanResponse, GetSavedThemeResponse, GetResearchPlanResponse, SignupRequest, LoginRequest, User, CreateRecordRequest, Record } from '../types';
 
 // APIの基本設定
 const API_BASE_URL = 'http://127.0.0.1:8000';
@@ -76,6 +76,40 @@ export interface UpdateProjectProgressResponse {
   message: string;
   current_step_index: number;
   progress_percentage: number;
+}
+
+// 記録関連レスポンス型
+export interface CreateRecordResponse {
+  record: {
+    recordId: string;
+    projectId: string;
+    userId: string;
+    stepId?: string;
+    recordType: string;
+    title: string;
+    content: string;
+    recordDate: string;
+    recordTime: string;
+    data: { [key: string]: any };
+    tags: string[];
+    weatherInfo?: { [key: string]: any };
+    locationInfo?: { [key: string]: any };
+    mediaIds: string[];
+    aiAnalysis?: { [key: string]: any };
+    isPublic: boolean;
+    parentVisible: boolean;
+    createdAt: string;
+    updatedAt: string;
+  };
+  media: any[];
+  aiAnalysis?: any;
+}
+
+export interface RecordListResponse {
+  records: CreateRecordResponse[];
+  total: number;
+  hasMore: boolean;
+  nextToken?: string;
 }
 
 // APIエラー型
@@ -213,6 +247,60 @@ class ThemeApi {
   }
 }
 
+// 記録API
+class RecordApi {
+  constructor(private client: ApiClient) {}
+
+  /**
+   * 新しい記録を作成する
+   */
+  async createRecord(userId: string, request: CreateRecordRequest): Promise<CreateRecordResponse> {
+    return this.client.post<CreateRecordResponse>(`/record/create?user_id=${userId}`, request);
+  }
+
+  /**
+   * プロジェクトの記録一覧を取得する
+   */
+  async getRecordsByProject(projectId: string, limit?: number, nextToken?: string): Promise<RecordListResponse> {
+    const params = new URLSearchParams();
+    if (limit) params.append('limit', limit.toString());
+    if (nextToken) params.append('last_evaluated_key', nextToken);
+
+    const queryString = params.toString();
+    const endpoint = `/record/project/${projectId}${queryString ? `?${queryString}` : ''}`;
+
+    return this.client.get<RecordListResponse>(endpoint);
+  }
+
+  /**
+   * ユーザーの記録一覧を取得する
+   */
+  async getRecordsByUser(userId: string, limit?: number, nextToken?: string): Promise<RecordListResponse> {
+    const params = new URLSearchParams();
+    if (limit) params.append('limit', limit.toString());
+    if (nextToken) params.append('last_evaluated_key', nextToken);
+
+    const queryString = params.toString();
+    const endpoint = `/record/user/${userId}${queryString ? `?${queryString}` : ''}`;
+
+    return this.client.get<RecordListResponse>(endpoint);
+  }
+
+  /**
+   * 日付の記録一覧を取得する
+   */
+  async getRecordsByDate(recordDate: string, limit?: number, nextToken?: string): Promise<RecordListResponse> {
+    const params = new URLSearchParams();
+    if (limit) params.append('limit', limit.toString());
+    if (nextToken) params.append('last_evaluated_key', nextToken);
+
+    const queryString = params.toString();
+    const endpoint = `/record/date/${recordDate}${queryString ? `?${queryString}` : ''}`;
+
+    return this.client.get<RecordListResponse>(endpoint);
+  }
+}
+
 // ユーザーAPI
 class UserApi {
   constructor(private client: ApiClient) {}
@@ -277,9 +365,11 @@ class UserApi {
 const apiClient = new ApiClient();
 export const themeApi = new ThemeApi(apiClient);
 export const userApi = new UserApi(apiClient);
+export const recordApi = new RecordApi(apiClient);
 
 // デフォルトエクスポート
 export default {
   theme: themeApi,
   user: userApi,
+  record: recordApi,
 };

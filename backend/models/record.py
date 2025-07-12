@@ -393,8 +393,8 @@ class CreateRecordRequest(BaseModel):
     recordType: Literal["observation", "experiment", "photo", "note", "data", "voice", "video"]
     title: str
     content: str
-    recordDate: date
-    recordTime: str
+    recordDate: Optional[date] = None
+    recordTime: Optional[str] = None
     data: Dict[str, Any] = {}
     tags: List[str] = []
     weatherInfo: Optional[WeatherInfo] = None
