@@ -56,6 +56,14 @@ const RecordCalendarPage: React.FC<RecordCalendarPageProps> = ({
     console.log('🔄 記録カレンダーページで記録データを再読み込み中...');
     loadUserRecords();
   }, [loadUserRecords]);
+
+  // 記録データが変更された時にカレンダーを更新
+  useEffect(() => {
+    console.log('📅 記録データが更新されました:', {
+      recordsCount: records.length,
+      lastUpdate: new Date().toLocaleTimeString()
+    });
+  }, [records]);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [showRecordModal, setShowRecordModal] = useState(false);
@@ -244,6 +252,16 @@ const RecordCalendarPage: React.FC<RecordCalendarPageProps> = ({
     }
   };
 
+  // 画像データが有効かチェック
+  const isValidImage = (image: any) => {
+    return image &&
+           image.base64Data &&
+           image.contentType &&
+           typeof image.base64Data === 'string' &&
+           typeof image.contentType === 'string' &&
+           image.base64Data.length > 0;
+  };
+
   // 画像拡大表示を開く
   const handleOpenImageModal = (imageIndex: number) => {
     setSelectedImageIndex(imageIndex);
@@ -259,7 +277,8 @@ const RecordCalendarPage: React.FC<RecordCalendarPageProps> = ({
   // 次の画像を表示
   const handleNextImage = () => {
     if (selectedRecord && selectedImageIndex !== null) {
-      const nextIndex = (selectedImageIndex + 1) % selectedRecord.data.images.length;
+      const validImages = selectedRecord.data.images.filter(isValidImage);
+      const nextIndex = (selectedImageIndex + 1) % validImages.length;
       setSelectedImageIndex(nextIndex);
     }
   };
@@ -267,8 +286,9 @@ const RecordCalendarPage: React.FC<RecordCalendarPageProps> = ({
   // 前の画像を表示
   const handlePrevImage = () => {
     if (selectedRecord && selectedImageIndex !== null) {
+      const validImages = selectedRecord.data.images.filter(isValidImage);
       const prevIndex = selectedImageIndex === 0
-        ? selectedRecord.data.images.length - 1
+        ? validImages.length - 1
         : selectedImageIndex - 1;
       setSelectedImageIndex(prevIndex);
     }
@@ -400,8 +420,8 @@ const RecordCalendarPage: React.FC<RecordCalendarPageProps> = ({
                       <div className="record-content">
                         <div className="record-title">
                           {record.title}
-                          {record.data?.images && record.data.images.length > 0 && (
-                            <span className="record-image-indicator">📷 {record.data.images.length}枚</span>
+                          {record.data?.images && record.data.images.filter(isValidImage).length > 0 && (
+                            <span className="record-image-indicator">📷 {record.data.images.filter(isValidImage).length}枚</span>
                           )}
                         </div>
                         <div className="record-preview">{record.content.substring(0, 50)}...</div>
@@ -415,11 +435,12 @@ const RecordCalendarPage: React.FC<RecordCalendarPageProps> = ({
                         {/* 写真プレビュー */}
                         {record.data?.images && record.data.images.length > 0 && (
                           <div className="record-image-preview">
-                            {record.data.images.slice(0, 3).map((image: any, index: number) => {
+                            {record.data.images.filter(isValidImage).slice(0, 3).map((image: any, index: number) => {
                               console.log(`🖼️ プレビュー画像${index + 1}をレンダリング中:`, {
                                 recordTitle: record.title,
                                 image: image,
-                                imageIndex: index
+                                imageIndex: index,
+                                isValid: isValidImage(image)
                               });
 
                               const imageUri = getImageDataUri(image);
@@ -449,9 +470,9 @@ const RecordCalendarPage: React.FC<RecordCalendarPageProps> = ({
                                 </div>
                               );
                             })}
-                            {record.data.images.length > 3 && (
+                            {record.data.images.filter(isValidImage).length > 3 && (
                               <div className="record-more-images">
-                                +{record.data.images.length - 3}
+                                +{record.data.images.filter(isValidImage).length - 3}
                               </div>
                             )}
                           </div>
@@ -594,11 +615,11 @@ const RecordCalendarPage: React.FC<RecordCalendarPageProps> = ({
                 </div>
 
                 {/* 画像表示 */}
-                {selectedRecord.data?.images && selectedRecord.data.images.length > 0 && (
+                {selectedRecord.data?.images && selectedRecord.data.images.filter(isValidImage).length > 0 && (
                   <div className="record-detail-images">
-                    <h5>写真 ({selectedRecord.data.images.length}枚)</h5>
+                    <h5>写真 ({selectedRecord.data.images.filter(isValidImage).length}枚)</h5>
                     <div className="record-images-grid">
-                      {selectedRecord.data.images.map((image: any, index: number) => {
+                      {selectedRecord.data.images.filter(isValidImage).map((image: any, index: number) => {
                         console.log(`🖼️ 詳細画像${index + 1}をレンダリング中:`, {
                           recordTitle: selectedRecord.title,
                           image: image,
@@ -691,20 +712,21 @@ const RecordCalendarPage: React.FC<RecordCalendarPageProps> = ({
       )}
 
       {/* 画像拡大表示モーダル */}
-      {showImageModal && selectedRecord && selectedImageIndex !== null && (
+      {showImageModal && selectedRecord && selectedImageIndex !== null &&
+       selectedRecord.data?.images && selectedRecord.data.images.filter(isValidImage).length > 0 && (
         <div className="image-modal-overlay" onClick={handleCloseImageModal}>
           <div className="image-modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="image-modal-header">
-              <h4>画像 {selectedImageIndex + 1} / {selectedRecord.data.images.length}</h4>
+              <h4>画像 {selectedImageIndex + 1} / {selectedRecord.data.images.filter(isValidImage).length}</h4>
               <button className="close-btn" onClick={handleCloseImageModal}>
                 ×
               </button>
             </div>
 
             <div className="image-modal-body">
-              {selectedRecord.data.images[selectedImageIndex] && (
+              {selectedRecord.data.images.filter(isValidImage)[selectedImageIndex] && (
                 <img
-                  src={getImageDataUri(selectedRecord.data.images[selectedImageIndex])}
+                  src={getImageDataUri(selectedRecord.data.images.filter(isValidImage)[selectedImageIndex])}
                   alt={`画像 ${selectedImageIndex + 1}`}
                   className="modal-image"
                 />
@@ -712,7 +734,7 @@ const RecordCalendarPage: React.FC<RecordCalendarPageProps> = ({
             </div>
 
             <div className="image-modal-navigation">
-              {selectedRecord.data.images.length > 1 && (
+              {selectedRecord.data.images.filter(isValidImage).length > 1 && (
                 <>
                   <button
                     className="nav-btn prev-btn"
@@ -734,11 +756,11 @@ const RecordCalendarPage: React.FC<RecordCalendarPageProps> = ({
 
             <div className="image-modal-info">
               <p>
-                {selectedRecord.data.images[selectedImageIndex]?.filename || `画像${selectedImageIndex + 1}`}
+                {selectedRecord.data.images.filter(isValidImage)[selectedImageIndex]?.filename || `画像${selectedImageIndex + 1}`}
               </p>
               <p className="image-size">
-                {selectedRecord.data.images[selectedImageIndex]?.size &&
-                  `${Math.round(selectedRecord.data.images[selectedImageIndex].size / 1024)}KB`
+                {selectedRecord.data.images.filter(isValidImage)[selectedImageIndex]?.size &&
+                  `${Math.round(selectedRecord.data.images.filter(isValidImage)[selectedImageIndex].size / 1024)}KB`
                 }
               </p>
             </div>

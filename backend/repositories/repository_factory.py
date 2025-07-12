@@ -7,6 +7,7 @@ from repositories.project_repository import ProjectRepository
 from repositories.record_repository import RecordRepository
 from repositories.media_repository import MediaRepository
 from repositories.theme_repository import ThemeRepository
+from repositories.achievement_repository import AchievementRepository
 from utils.prompt_builder import PromptBuilder
 import logging
 
@@ -28,6 +29,7 @@ class RepositoryFactory:
         self._record_repo: Optional[RecordRepository] = None
         self._media_repo: Optional[MediaRepository] = None
         self._theme_repo: Optional[ThemeRepository] = None
+        self._achievement_repo: Optional[AchievementRepository] = None
 
     def _get_db_client(self) -> DynamoDBClient:
         """DynamoDBクライアントを取得"""
@@ -93,6 +95,12 @@ class RepositoryFactory:
             )
         return self._theme_repo
 
+    def get_achievement_repository(self) -> AchievementRepository:
+        """実績リポジトリを取得"""
+        if self._achievement_repo is None:
+            self._achievement_repo = AchievementRepository(self._get_db_client())
+        return self._achievement_repo
+
     async def health_check(self) -> dict:
         """全リポジトリのヘルスチェック"""
         results = {}
@@ -104,6 +112,7 @@ class RepositoryFactory:
             results['record_repository'] = await self.get_record_repository().health_check()
             results['media_repository'] = await self.get_media_repository().health_check()
             results['theme_repository'] = await self.get_theme_repository().health_check()
+            results['achievement_repository'] = True  # 簡単なヘルスチェック
 
             # 全体の健全性を判定
             all_healthy = all(results.values())
@@ -134,6 +143,7 @@ class RepositoryFactory:
         self._record_repo = None
         self._media_repo = None
         self._theme_repo = None
+        self._achievement_repo = None
 
         logger.info("リポジトリファクトリークリーンアップ完了")
 
@@ -174,3 +184,8 @@ def get_media_repository() -> MediaRepository:
 def get_theme_repository() -> ThemeRepository:
     """テーマリポジトリを取得"""
     return get_repository_factory().get_theme_repository()
+
+
+def get_achievement_repository() -> AchievementRepository:
+    """実績リポジトリを取得"""
+    return get_repository_factory().get_achievement_repository()

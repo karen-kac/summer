@@ -3,6 +3,8 @@ from typing import Dict, Any, List, Optional
 from datetime import date, datetime
 from repositories.repository_factory import get_repository_factory
 from repositories.record_repository import RecordRepository
+from repositories.user_repository import UserRepository
+from services.achievement_service import AchievementService
 from models.record import (
     CreateRecordRequest, UpdateRecordRequest, RecordResponse, RecordListResponse,
     WeatherInfo, LocationInfo
@@ -18,13 +20,30 @@ def get_record_repository() -> RecordRepository:
     factory = get_repository_factory()
     return factory.get_record_repository()
 
+def get_user_repository() -> UserRepository:
+    """ユーザーリポジトリを取得"""
+    factory = get_repository_factory()
+    return factory.get_user_repository()
 
-@router.post("/create", response_model=RecordResponse)
+def get_achievement_service() -> AchievementService:
+    """実績サービスを取得"""
+    factory = get_repository_factory()
+    return AchievementService(
+        achievement_repo=factory.get_achievement_repository(),
+        user_repo=factory.get_user_repository(),
+        project_repo=factory.get_project_repository(),
+        record_repo=factory.get_record_repository()
+    )
+
+
+@router.post("/create")
 async def create_record(
     request: CreateRecordRequest,
     user_id: str = Query(..., description="ユーザーID"),
-    record_repo: RecordRepository = Depends(get_record_repository)
-) -> RecordResponse:
+    record_repo: RecordRepository = Depends(get_record_repository),
+    user_repo: UserRepository = Depends(get_user_repository),
+    achievement_service: AchievementService = Depends(get_achievement_service)
+    ) -> Dict[str, Any]:
     """
     新しい研究記録を作成
 
@@ -55,8 +74,41 @@ async def create_record(
                 detail="記録の作成に失敗しました"
             )
 
+        # ユーザー統計を更新
+        try:
+            await user_repo.increment_user_stat(user_id, "totalRecords", 1)
+            if request.recordType == "photo":
+                await user_repo.increment_user_stat(user_id, "totalPhotos", 1)
+            logger.info(f"ユーザー統計更新成功: {user_id} - 記録+1, 写真+{1 if request.recordType == 'photo' else 0}")
+        except Exception as e:
+            logger.warning(f"ユーザー統計更新失敗: {user_id} - {e}")
+
+        # 実績チェック - 記録作成
+        event_type = "record_created"
+        if request.recordType == "photo":
+            event_type = "photo_uploaded"
+
+        achievement_result = await achievement_service.check_and_grant_achievements(
+            user_id=user_id,
+            event_type=event_type,
+            event_data={
+                "record_id": record_response.record.recordId,
+                "record_type": request.recordType,
+                "project_id": request.projectId,
+                "record_title": request.title
+            }
+        )
+
         logger.info(f"記録作成成功: {record_response.record.recordId}")
-        return record_response
+
+        # レスポンスを作成
+        return {
+            "success": True,
+            "record": record_response.record.model_dump(),
+            "new_achievements": [ach.model_dump() for ach in achievement_result.newAchievements] if achievement_result.newAchievements else [],
+            "points_earned": achievement_result.totalNewPoints,
+            "message": "記録が正常に作成されました"
+        }
 
     except Exception as e:
         logger.error(f"記録作成エラー: {e}")

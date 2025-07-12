@@ -5,6 +5,8 @@ from datetime import date
 from repositories.repository_factory import get_repository_factory
 from repositories.user_repository import UserRepository
 from repositories.project_repository import ProjectRepository
+from repositories.achievement_repository import AchievementRepository
+from services.achievement_service import AchievementService
 from models.user import CreateUserRequest, UserResponse
 from models.project import ResearchProject, CreateProjectRequest
 from models.database import KeyBuilder
@@ -23,6 +25,16 @@ def get_project_repository() -> ProjectRepository:
     """プロジェクトリポジトリを取得"""
     factory = get_repository_factory()
     return factory.get_project_repository()
+
+def get_achievement_service() -> AchievementService:
+    """実績サービスを取得"""
+    factory = get_repository_factory()
+    return AchievementService(
+        achievement_repo=factory.get_achievement_repository(),
+        user_repo=factory.get_user_repository(),
+        project_repo=factory.get_project_repository(),
+        record_repo=factory.get_record_repository()
+    )
 
 @router.post("/signup", response_model=UserResponse)
 async def signup(
@@ -157,12 +169,14 @@ class DashboardDataResponse(BaseModel):
     active_projects: List[Dict[str, Any]]
     past_projects: List[Dict[str, Any]]
     user_stats: Dict[str, Any]
+    recent_achievements: List[Dict[str, Any]]
 
 @router.get("/dashboard/{user_id}")
 async def get_dashboard_data(
     user_id: str,
     user_repo: UserRepository = Depends(get_user_repository),
-    project_repo: ProjectRepository = Depends(get_project_repository)
+    project_repo: ProjectRepository = Depends(get_project_repository),
+    achievement_service: AchievementService = Depends(get_achievement_service)
 ) -> DashboardDataResponse:
     """
     ダッシュボード用のユーザーデータを取得
@@ -246,10 +260,26 @@ async def get_dashboard_data(
             "totalExperiments": user_response.stats.totalExperiments if user_response.stats else 0,
         }
 
+        # 最近の実績を取得
+        recent_achievements_response = await achievement_service.get_recent_achievements(user_id, limit=5)
+        recent_achievements = []
+        for achievement in recent_achievements_response:
+            achievement_dict = {
+                "id": achievement.achievementId,
+                "name": achievement.name,
+                "description": achievement.description,
+                "icon": achievement.icon,
+                "category": achievement.category,
+                "points": achievement.points,
+                "earnedAt": achievement.earnedAt.isoformat() if achievement.earnedAt else None
+            }
+            recent_achievements.append(achievement_dict)
+
         return DashboardDataResponse(
             active_projects=active_projects,
             past_projects=past_projects,
-            user_stats=user_stats
+            user_stats=user_stats,
+            recent_achievements=recent_achievements
         )
 
     except HTTPException:
@@ -282,7 +312,8 @@ class UpdateProjectProgressRequest(BaseModel):
 async def create_project_from_theme(
     user_id: str,
     request: CreateProjectFromThemeRequest,
-    project_repo: ProjectRepository = Depends(get_project_repository)
+    project_repo: ProjectRepository = Depends(get_project_repository),
+    achievement_service: AchievementService = Depends(get_achievement_service)
 ) -> Dict[str, Any]:
     """
     テーマからプロジェクトを作成
@@ -341,6 +372,17 @@ async def create_project_from_theme(
 
         logger.info(f"プロジェクト作成成功: {user_id}")
 
+        # 実績チェック - テーマ選択完了
+        achievement_result = await achievement_service.check_and_grant_achievements(
+            user_id=user_id,
+            event_type="theme_selected",
+            event_data={
+                "theme_id": request.theme_id,
+                "project_id": project_response.project.projectId,
+                "theme_title": request.title
+            }
+        )
+
         # フロントエンド用にフィールド名を変換
         project_dict = project_response.project.model_dump()
         # PKからプロジェクトIDを抽出して id フィールドに設定
@@ -361,7 +403,9 @@ async def create_project_from_theme(
             "success": True,
             "project": project_dict,
             "message": "プロジェクトが正常に作成されました",
-            "previous_projects_saved": len(active_projects) if active_projects else 0
+            "previous_projects_saved": len(active_projects) if active_projects else 0,
+            "new_achievements": [ach.model_dump() for ach in achievement_result.newAchievements] if achievement_result.newAchievements else [],
+            "points_earned": achievement_result.totalNewPoints
         }
 
     except HTTPException:
@@ -377,7 +421,8 @@ async def create_project_from_theme(
 async def update_project_progress(
     project_id: str,
     request: UpdateProjectProgressRequest,
-    project_repo: ProjectRepository = Depends(get_project_repository)
+    project_repo: ProjectRepository = Depends(get_project_repository),
+    achievement_service: AchievementService = Depends(get_achievement_service)
 ) -> Dict[str, Any]:
     """
     プロジェクトの進捗を更新
@@ -409,12 +454,31 @@ async def update_project_progress(
                 detail="プロジェクト進捗更新に失敗しました"
             )
 
+        # プロジェクト情報を取得してユーザーIDを取得
+        project = await project_repo.get_project_by_id(project_id)
+        if project:
+            # 実績チェック - ステップ完了
+            achievement_result = await achievement_service.check_and_grant_achievements(
+                user_id=project.project.userId,
+                event_type="step_completed",
+                event_data={
+                    "project_id": project_id,
+                    "step_index": request.current_step_index,
+                    "progress_percentage": request.progress_percentage,
+                    "project_title": project.project.title
+                }
+            )
+        else:
+            achievement_result = None
+
         logger.info(f"プロジェクト進捗更新成功: {project_id} - ステップ{request.current_step_index} ({request.progress_percentage}%)")
         return {
             "success": True,
             "message": "プロジェクト進捗が正常に更新されました",
             "current_step_index": request.current_step_index,
-            "progress_percentage": request.progress_percentage
+            "progress_percentage": request.progress_percentage,
+            "new_achievements": [ach.model_dump() for ach in achievement_result.newAchievements] if achievement_result and achievement_result.newAchievements else [],
+            "points_earned": achievement_result.totalNewPoints if achievement_result else 0
         }
 
     except HTTPException:

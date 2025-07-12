@@ -374,22 +374,40 @@ const ActiveProjectPageWrapper: React.FC = () => {
 
 const RecordCalendarPageWrapper: React.FC = () => {
   const navigate = useNavigate();
-  const { activeProjects, records, schedules, addRecord } = useApp();
+  const { activeProjects, records, schedules, addRecord, loadUserRecords } = useApp();
+
+  // 記録データの変更を監視
+  useEffect(() => {
+    console.log('📅 RecordCalendarPageWrapper - 記録データが更新されました:', {
+      recordsCount: records.length,
+      timestamp: new Date().toLocaleTimeString()
+    });
+  }, [records]);
 
   const handleBack = () => {
     navigate('/dashboard');
   };
 
-  const handleAddRecord = (record: Partial<Record>) => {
-    // AppContextの addRecord メソッドを使用して記録を追加
-    addRecord(record);
+  const handleAddRecord = async (record: Partial<Record>) => {
+    try {
+      // AppContextの addRecord メソッドを使用して記録を追加
+      addRecord(record);
 
-    // 成功メッセージを表示（将来的にはtoast通知などで置き換え）
-    console.log('記録が正常に追加されました:', {
-      title: record.title,
-      type: record.recordType,
-      date: new Date(record.recordDate || '').toLocaleDateString('ja-JP')
-    });
+      // 記録追加後に記録一覧を再読み込み
+      await loadUserRecords();
+
+      // 成功メッセージを表示
+      console.log('✅ 記録が正常に追加されました:', {
+        title: record.title,
+        type: record.recordType,
+        date: new Date(record.recordDate || '').toLocaleDateString('ja-JP')
+      });
+
+      alert('記録が正常に追加されました！');
+    } catch (error) {
+      console.error('❌ 記録追加エラー:', error);
+      alert('記録の追加に失敗しました。もう一度お試しください。');
+    }
   };
 
   const handleViewRecord = (record: Record) => {
@@ -413,7 +431,7 @@ const RecordCalendarPageWrapper: React.FC = () => {
       data: record.data
     };
 
-    console.log('記録詳細:', recordDetails);
+    console.log('📋 記録詳細:', recordDetails);
 
     // 将来的にはここで詳細表示モーダルを開く
     // 例: setSelectedRecord(record); setShowRecordDetailModal(true);

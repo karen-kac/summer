@@ -249,32 +249,58 @@ class RecordRepository:
         Returns:
             List[Media]: 署名付きURLを持つメディアオブジェクトのリスト
         """
+        logger.info(f"📷 メディア取得開始: {len(media_ids)}件のメディアID")
         media_list = []
+
         for media_id in media_ids:
             try:
+                logger.info(f"📷 メディア取得中: {media_id}")
                 media_item = await self.db.get_item(
                     pk=KeyBuilder.media_pk(media_id),
                     sk="METADATA"
                 )
+
                 if media_item:
+                    logger.info(f"📷 メディア取得成功: {media_id}")
                     media = Media(**media_item)
 
-                    # 署名付きダウンロードURLを生成
-                    if self.s3:
-                        download_url = await self.s3.generate_presigned_download_url(
-                            s3_key=media.s3Key,
-                            expires_in=3600  # 1時間有効
-                        )
-                        # メディアオブジェクトに一時的にURLを追加
-                        media_dict = media.model_dump()
-                        media_dict['downloadUrl'] = download_url
-                        media_list.append(media_dict)
-                    else:
-                        media_list.append(media)
+                    # S3から画像データを取得してBase64エンコード
+                    media_dict = media.model_dump()
+
+                    if self.s3 and media.s3Key:
+                        try:
+                            # S3から画像データを取得
+                            logger.info(f"📷 S3から画像データ取得中: {media.s3Key}")
+                            image_data = await self.s3.get_object(media.s3Key)
+
+                            if image_data:
+                                # Base64エンコード
+                                import base64
+                                base64_data = base64.b64encode(image_data).decode('utf-8')
+
+                                # メディアオブジェクトにBase64データを追加
+                                media_dict.update({
+                                    'base64Data': base64_data,
+                                    'contentType': media.mimeType,
+                                    'filename': media.fileName,
+                                    'size': media.fileSize
+                                })
+
+                                logger.info(f"📷 Base64データ生成成功: {media_id}, サイズ: {len(base64_data)}")
+                            else:
+                                logger.warning(f"📷 S3から画像データを取得できませんでした: {media.s3Key}")
+                        except Exception as e:
+                            logger.error(f"📷 S3からのデータ取得エラー: {media.s3Key}, {e}")
+
+                    media_list.append(media_dict)
+                else:
+                    logger.warning(f"📷 メディアが見つかりませんでした: {media_id}")
+
             except Exception as e:
-                logger.warning(f"メディア取得エラー (ID: {media_id}): {e}")
+                logger.error(f"📷 メディア取得エラー (ID: {media_id}): {e}")
                 continue
 
+        logger.info(f"📷 メディア取得完了: {len(media_list)}件")
         return media_list
 
     async def get_record_by_id(self, project_id: str, record_date: date, sequence: str) -> Optional[RecordResponse]:
@@ -326,11 +352,13 @@ class RecordRepository:
             RecordListResponse: 記録一覧
         """
         try:
+            # ScanIndexForwardをFalseにして最新の記録を最初に取得
             result = await self.db.query_items(
                 pk=KeyBuilder.project_pk(project_id),
                 sk_prefix="RECORD#",
                 limit=limit,
-                last_evaluated_key=last_evaluated_key
+                last_evaluated_key=last_evaluated_key,
+                scan_index_forward=False  # 最新の記録を最初に取得
             )
 
             # 記録オブジェクトに変換
@@ -349,6 +377,7 @@ class RecordRepository:
                     logger.warning(f"記録データの変換でエラー: {e}")
                     continue
 
+            logger.info(f"プロジェクト記録取得成功: {project_id} - {len(records)}件 (最新順)")
             return RecordListResponse(
                 records=records,
                 total=result['count'],
@@ -374,13 +403,14 @@ class RecordRepository:
             RecordListResponse: 記録一覧
         """
         try:
-            # GSI1を使用してユーザーの記録を取得
+            # GSI1を使用してユーザーの記録を取得（最新順）
             result = await self.db.query_gsi(
                 gsi_name="1",
                 pk=KeyBuilder.user_pk(user_id),
                 sk_prefix="RECORD#",
                 limit=limit,
-                last_evaluated_key=last_evaluated_key
+                last_evaluated_key=last_evaluated_key,
+                scan_index_forward=False  # 最新の記録を最初に取得
             )
 
             # 記録オブジェクトに変換
@@ -399,6 +429,7 @@ class RecordRepository:
                     logger.warning(f"記録データの変換でエラー: {e}")
                     continue
 
+            logger.info(f"ユーザー記録取得成功: {user_id} - {len(records)}件 (最新順)")
             return RecordListResponse(
                 records=records,
                 total=result['count'],
@@ -426,12 +457,13 @@ class RecordRepository:
         try:
             date_str = record_date.strftime("%Y-%m-%d")
 
-            # GSI3を使用して日付の記録を取得
+            # GSI3を使用して日付の記録を取得（最新順）
             result = await self.db.query_gsi(
                 gsi_name="3",
                 pk=f"DATE#{date_str}",
                 limit=limit,
-                last_evaluated_key=last_evaluated_key
+                last_evaluated_key=last_evaluated_key,
+                scan_index_forward=False  # 最新の記録を最初に取得
             )
 
             # 記録オブジェクトに変換
@@ -450,6 +482,7 @@ class RecordRepository:
                     logger.warning(f"記録データの変換でエラー: {e}")
                     continue
 
+            logger.info(f"日付記録取得成功: {record_date} - {len(records)}件 (最新順)")
             return RecordListResponse(
                 records=records,
                 total=result['count'],

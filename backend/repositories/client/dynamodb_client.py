@@ -187,7 +187,8 @@ class DynamoDBClient:
                          expression_attribute_values: Dict[str, Any] = None,
                          expression_attribute_names: Dict[str, str] = None,
                          limit: int = None,
-                         last_evaluated_key: Dict[str, Any] = None) -> Dict[str, Any]:
+                         last_evaluated_key: Dict[str, Any] = None,
+                         scan_index_forward: bool = False) -> Dict[str, Any]:
         """
         アイテムをクエリ
 
@@ -199,6 +200,7 @@ class DynamoDBClient:
             expression_attribute_names: 属性名マッピング
             limit: 取得制限
             last_evaluated_key: 前回のクエリの続きから取得
+            scan_index_forward: ソート順 (False=降順/最新順, True=昇順/古い順)
 
         Returns:
             Dict[str, Any]: クエリ結果
@@ -211,7 +213,7 @@ class DynamoDBClient:
 
             params = {
                 'KeyConditionExpression': key_condition,
-                'ScanIndexForward': True  # ソート順: 昇順
+                'ScanIndexForward': scan_index_forward
             }
 
             if filter_expression and expression_attribute_values:
@@ -239,7 +241,7 @@ class DynamoDBClient:
                 'last_evaluated_key': response.get('LastEvaluatedKey')
             }
 
-            logger.info(f"クエリ成功: PK={pk}, count={result['count']}")
+            logger.info(f"クエリ成功: PK={pk}, count={result['count']}, order={'asc' if scan_index_forward else 'desc'}")
             return result
 
         except ClientError as e:
@@ -254,7 +256,8 @@ class DynamoDBClient:
                        expression_attribute_values: Dict[str, Any] = None,
                        expression_attribute_names: Dict[str, str] = None,
                        limit: int = None,
-                       last_evaluated_key: Dict[str, Any] = None) -> Dict[str, Any]:
+                       last_evaluated_key: Dict[str, Any] = None,
+                       scan_index_forward: bool = False) -> Dict[str, Any]:
         """
         GSI(Global Secondary Index)をクエリ
 
@@ -267,6 +270,7 @@ class DynamoDBClient:
             expression_attribute_names: 属性名マッピング
             limit: 取得制限
             last_evaluated_key: 前回のクエリの続きから取得
+            scan_index_forward: ソート順 (False=降順/最新順, True=昇順/古い順)
 
         Returns:
             Dict[str, Any]: クエリ結果
@@ -280,7 +284,7 @@ class DynamoDBClient:
             params = {
                 'IndexName': f'GSI{gsi_name}',
                 'KeyConditionExpression': key_condition,
-                'ScanIndexForward': True
+                'ScanIndexForward': scan_index_forward
             }
 
             if filter_expression and expression_attribute_values:
@@ -308,7 +312,7 @@ class DynamoDBClient:
                 'last_evaluated_key': response.get('LastEvaluatedKey')
             }
 
-            logger.info(f"GSI{gsi_name}クエリ成功: PK={pk}, count={result['count']}")
+            logger.info(f"GSI{gsi_name}クエリ成功: PK={pk}, count={result['count']}, order={'asc' if scan_index_forward else 'desc'}")
             return result
 
         except ClientError as e:

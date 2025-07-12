@@ -44,6 +44,15 @@ export interface DashboardDataResponse {
     totalPhotos: number;
     totalExperiments: number;
   };
+  recent_achievements: Array<{
+    id: string;
+    name: string;
+    description: string;
+    icon: string;
+    category: string;
+    points: number;
+    earnedAt?: string;
+  }>;
 }
 
 export interface CreateProjectRequest {

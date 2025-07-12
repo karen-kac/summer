@@ -298,18 +298,25 @@ class UserRepository:
         try:
             update_expression = "SET updatedAt = :updatedAt"
             expression_values = {':updatedAt': datetime.now()}
+            expression_names = {}
 
-            # 統計値を更新
+            # 統計値を更新（予約キーワード対応）
             for key, value in kwargs.items():
                 if value is not None:
-                    update_expression += f", {key} = :{key}"
+                    # 'level'は予約キーワードなので、expression attribute namesを使用
+                    if key == 'level':
+                        update_expression += f", #level = :{key}"
+                        expression_names['#level'] = 'level'
+                    else:
+                        update_expression += f", {key} = :{key}"
                     expression_values[f":{key}"] = value
 
             success = await self.db.update_item(
                 pk=KeyBuilder.user_pk(user_id),
                 sk="STATS",
                 update_expression=update_expression,
-                expression_attribute_values=expression_values
+                expression_attribute_values=expression_values,
+                expression_attribute_names=expression_names if expression_names else None
             )
 
             if success:
@@ -321,6 +328,51 @@ class UserRepository:
 
         except Exception as e:
             logger.error(f"ユーザー統計更新エラー: {user_id}, {e}")
+            return False
+
+    async def increment_user_stat(self, user_id: str, stat_name: str, increment: int = 1) -> bool:
+        """
+        ユーザー統計の特定の値をインクリメント
+
+        Args:
+            user_id: ユーザーID
+            stat_name: 統計項目名
+            increment: 増分値
+
+        Returns:
+            bool: 更新成功時True
+        """
+        try:
+            # DynamoDBのatomic incrementを使用（予約キーワード対応）
+            expression_names = {}
+            if stat_name == 'level':
+                update_expression = f"SET updatedAt = :updatedAt ADD #level :increment"
+                expression_names['#level'] = 'level'
+            else:
+                update_expression = f"SET updatedAt = :updatedAt ADD {stat_name} :increment"
+
+            expression_values = {
+                ':updatedAt': datetime.now(),
+                ':increment': increment
+            }
+
+            success = await self.db.update_item(
+                pk=KeyBuilder.user_pk(user_id),
+                sk="STATS",
+                update_expression=update_expression,
+                expression_attribute_values=expression_values,
+                expression_attribute_names=expression_names if expression_names else None
+            )
+
+            if success:
+                logger.info(f"ユーザー統計インクリメント成功: {user_id} - {stat_name}+{increment}")
+            else:
+                logger.error(f"ユーザー統計インクリメント失敗: {user_id} - {stat_name}")
+
+            return success
+
+        except Exception as e:
+            logger.error(f"ユーザー統計インクリメントエラー: {user_id} - {stat_name}, {e}")
             return False
 
     async def create_line_connection(self, user_id: str, line_user_id: str, **kwargs) -> bool:

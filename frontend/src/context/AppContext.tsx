@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import { UserProfile, ResearchTheme, ResearchProject, AuthState, LoginRequest, SignupRequest, User, Grade, Interest, Personality, Strength, Duration, Record, Schedule } from '../types';
+import { UserProfile, ResearchTheme, ResearchProject, AuthState, LoginRequest, SignupRequest, User, Grade, Interest, Personality, Strength, Duration, Record, Schedule, Achievement } from '../types';
 import { themeApi, userApi, recordApi, ApiError, CreateRecordResponse } from '../services/api';
 
 // ヘルパー関数: 研究ジャンルに応じたステップ数を返す
@@ -53,6 +53,11 @@ interface AppContextType {
     totalExperiments: number;
   };
 
+  // 実績関連
+  recentAchievements: Achievement[];
+  newAchievements: Achievement[];
+  showAchievementNotification: boolean;
+
   // アクション
   handleLogin: (credentials: LoginRequest) => Promise<void>;
   handleSignup: (credentials: SignupRequest) => Promise<void>;
@@ -70,6 +75,8 @@ interface AppContextType {
   generateThemesFromAPI: (profile: UserProfile, useAI?: boolean) => Promise<void>;
   loadSavedThemes: () => Promise<void>;
   loadDashboardData: () => Promise<void>;
+  dismissAchievementNotification: () => void;
+  showNewAchievements: (achievements: Achievement[]) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -122,6 +129,11 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     totalPhotos: 0,
     totalExperiments: 0
   });
+
+  // 実績関連の状態を追加
+  const [recentAchievements, setRecentAchievements] = useState<Achievement[]>([]);
+  const [newAchievements, setNewAchievements] = useState<Achievement[]>([]);
+  const [showAchievementNotification, setShowAchievementNotification] = useState<boolean>(false);
 
   // 研究タイプとステップに応じたタスク生成
   const generateTasksForProject = useCallback((project: ResearchProject, stepIndex: number) => {
@@ -339,7 +351,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         };
       });
 
-            setRecords(transformedRecords);
+      setRecords(transformedRecords);
       console.log(`✅ ${transformedRecords.length}件の記録を読み込みました`);
 
       // 画像がある記録の数を確認
@@ -358,6 +370,13 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
           firstImageStructure: record.data?.images?.[0] ? Object.keys(record.data.images[0]) : [],
           firstImageData: record.data?.images?.[0]
         });
+      });
+
+      // 記録更新完了を通知
+      console.log('🔄 記録データ更新完了:', {
+        timestamp: new Date().toLocaleTimeString(),
+        totalRecords: transformedRecords.length,
+        recordsWithImages: recordsWithImages.length
       });
 
     } catch (error) {
@@ -402,7 +421,32 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       });
       setActiveProjects(activeProjects);
       setPastProjects(response.past_projects || []);
-      setUserStats(response.user_stats);
+      setUserStats(response.user_stats || {
+        totalPoints: 0,
+        level: 1,
+        completedProjects: 0,
+        currentStreak: 0,
+        totalRecords: 0,
+        totalPhotos: 0,
+        totalExperiments: 0
+      });
+
+      // 最近の実績を設定
+      const recentAchievements = response.recent_achievements || [];
+      const convertedAchievements = recentAchievements.map((achievement: any) => ({
+        id: achievement.id,
+        name: achievement.name,
+        description: achievement.description,
+        icon: achievement.icon,
+        category: achievement.category,
+        requirements: {},
+        points: achievement.points,
+        isActive: true,
+        createdAt: achievement.earnedAt || new Date().toISOString()
+      }));
+      setRecentAchievements(convertedAchievements);
+
+      console.log('🏆 最近の実績を読み込みました:', convertedAchievements.length, '件');
 
       // 最初のアクティブプロジェクトがある場合、詳細をログ出力してタスクを生成
       if (activeProjects.length > 0) {
@@ -883,6 +927,20 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     }
   };
 
+  // 実績を追加する関数
+  const showNewAchievements = (achievements: Achievement[]) => {
+    setNewAchievements(achievements);
+    setShowAchievementNotification(true);
+    console.log('🎉 新しい実績が追加されました！', achievements);
+  };
+
+  // 実績通知を閉じる関数
+  const dismissAchievementNotification = () => {
+    setShowAchievementNotification(false);
+    setNewAchievements([]);
+    console.log('実績通知を閉じました。');
+  };
+
   const value: AppContextType = {
     authState,
     authError,
@@ -902,6 +960,9 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     dashboardLoading,
     dashboardError,
     userStats,
+    recentAchievements,
+    newAchievements,
+    showAchievementNotification,
     handleLogin,
     handleSignup,
     handleLogout,
@@ -917,7 +978,9 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     loadUserRecords,
     generateThemesFromAPI,
     loadSavedThemes,
-    loadDashboardData
+    loadDashboardData,
+    dismissAchievementNotification,
+    showNewAchievements
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

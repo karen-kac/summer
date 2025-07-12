@@ -5,6 +5,7 @@ import { useApp } from '../context/AppContext';
 import '../styles/Common.css';
 import '../styles/Components.css';
 import '../styles/ActiveProject.css';
+import { useNavigate } from 'react-router-dom';
 
 interface ActiveProjectPageProps {
   project: ResearchProject;
@@ -24,6 +25,7 @@ const ActiveProjectPage: React.FC<ActiveProjectPageProps> = ({
   onBack,
   onUpdateProgress
 }) => {
+  const navigate = useNavigate();
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [projectSteps, setProjectSteps] = useState<StepTemplate[]>([]);
   const [isLoadingPlan, setIsLoadingPlan] = useState(false);
@@ -620,18 +622,24 @@ const ActiveProjectPage: React.FC<ActiveProjectPageProps> = ({
       const response = await recordApi.createRecord(authState.user.id, createRequest);
 
       console.log('✅ 記録作成成功:', response);
-      console.log('📷 作成された記録のメディア情報:', {
-        recordId: response.record?.recordId,
-        mediaCount: response.media?.length || 0,
-        mediaData: response.media || [],
-        fullResponse: response
-      });
 
       // 成功通知
-      alert('記録が正常に保存されました！');
+      const userChoice = window.confirm('記録が正常に保存されました！\n\nカレンダーページで確認しますか？');
 
-      // 記録一覧を更新
-      loadUserRecords();
+      if (userChoice) {
+        // 記録一覧を更新してからカレンダーページに遷移
+        setTimeout(async () => {
+          await loadUserRecords();
+          console.log('📚 記録作成後の記録一覧を更新しました');
+          navigate('/records');
+        }, 1000);
+      } else {
+        // 記録一覧を更新（少し待機してから再読み込み）
+        setTimeout(async () => {
+          await loadUserRecords();
+          console.log('📚 記録作成後の記録一覧を更新しました');
+        }, 1000);
+      }
 
       // モーダルを閉じる
       handleCloseRecordModal();
@@ -738,10 +746,22 @@ const ActiveProjectPage: React.FC<ActiveProjectPageProps> = ({
       });
 
       // 成功通知
-      alert('写真が正常に保存されました！');
+      const userChoice = window.confirm('写真が正常に保存されました！\n\nカレンダーページで確認しますか？');
 
-      // 記録一覧を更新
-      loadUserRecords();
+      if (userChoice) {
+        // 記録一覧を更新してからカレンダーページに遷移
+        setTimeout(async () => {
+          await loadUserRecords();
+          console.log('📚 写真記録作成後の記録一覧を更新しました');
+          navigate('/records');
+        }, 1500);
+      } else {
+        // 記録一覧を更新（少し待機してから再読み込み）
+        setTimeout(async () => {
+          await loadUserRecords();
+          console.log('📚 写真記録作成後の記録一覧を更新しました');
+        }, 1500);
+      }
 
       // モーダルを閉じる
       handleClosePhotoModal();
