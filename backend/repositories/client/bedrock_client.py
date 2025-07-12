@@ -1,7 +1,7 @@
 import os
 import re
 import json
-import google.generativeai as genai
+import boto3
 from dotenv import load_dotenv
 from fastapi import HTTPException
 from typing import Union
@@ -10,46 +10,44 @@ from typing import Union
 load_dotenv(".env")
 
 
-class GeminiClient:
+class BedrockClient:
     """
-    GoogleのGemini APIとのデータ送受信を専門に担当するクラス
+    AWS BedrockのClaude APIとのデータ送受信を専門に担当するクラス
     """
 
     def __init__(self):
         try:
-            # APIキーの設定
-            api_key = os.environ.get("GEMINI_API_KEY")
-            if not api_key:
-                raise ValueError("GEMINI_API_KEYが設定されていません。")
+            # AWS認証情報の確認
+            aws_access_key = os.environ.get("AWS_ACCESS_KEY_ID")
+            aws_secret_key = os.environ.get("AWS_SECRET_ACCESS_KEY")
+            aws_region = os.environ.get("AWS_REGION", "us-east-1")
+            
+            if not aws_access_key or not aws_secret_key:
+                raise ValueError("AWS認証情報が設定されていません。")
 
-            # ダミーキーの場合はエラー
-            if api_key == "dummy_key_for_testing":
-                raise ValueError("実際のGEMINI_API_KEYを設定してください。ダミーキーでは実際のAI生成はできません。")
-
-            # Gemini APIの設定
-            genai.configure(api_key=api_key)
-            self.model = genai.GenerativeModel(
-                "gemini-1.5-flash",
-                generation_config={
-                    "temperature": 0.7,
-                    "top_p": 0.95,
-                    "top_k": 40,
-                    "max_output_tokens": 8192,
-                }
+            # Bedrockクライアントの初期化
+            self.client = boto3.client(
+                "bedrock-runtime",
+                region_name=aws_region,
+                aws_access_key_id=aws_access_key,
+                aws_secret_access_key=aws_secret_key
             )
+            self.model_id = os.environ.get("BEDROCK_MODEL_ID")
+            
+            if not self.model_id:
+                raise ValueError("BedrockモデルIDが設定されていません。")
 
         except ValueError as e:
             raise RuntimeError(str(e))
         except Exception as e:
-            # その他の初期化エラー
-            raise RuntimeError(f"Gemini API初期化中にエラーが発生しました: {e}")
+            raise RuntimeError(f"Bedrock API初期化中にエラーが発生しました: {e}")
 
     async def generate_content(self, prompt: str) -> str:
         """
-        指定されたプロンプトをGemini APIに送信し、結果のテキストを返す
+        指定されたプロンプトをBedrock APIに送信し、結果のテキストを返す
 
         Args:
-            prompt (str): Gemini APIに送信するプロンプト文字列
+            prompt (str): Bedrock APIに送信するプロンプト文字列
 
         Returns:
             str: APIからの応答テキスト
@@ -58,17 +56,33 @@ class GeminiClient:
             HTTPException: API通信でエラーが発生した場合
         """
         try:
-            response = await self.model.generate_content_async(prompt)
+            body = {
+                "anthropic_version": "bedrock-2023-05-31",
+                "max_tokens": 8192,
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": prompt
+                    }
+                ]
+            }
+            
+            response = self.client.invoke_model(
+                modelId=self.model_id,
+                body=json.dumps(body)
+            )
+            
+            response_body = json.loads(response["body"].read())
+            
+            if not response_body.get("content"):
+                raise ValueError("Bedrock APIから空の応答が返されました")
 
-            if not response.text:
-                raise ValueError("Gemini APIから空の応答が返されました")
-
-            return response.text
+            return response_body["content"][0]["text"]
 
         except Exception as e:
             raise HTTPException(
                 status_code=500,
-                detail=f"Gemini APIとの通信中にエラーが発生しました: {e}"
+                detail=f"Bedrock APIとの通信中にエラーが発生しました: {e}"
             )
 
     async def post_prompt(self, prompt: str) -> Union[dict, list]:
@@ -85,7 +99,7 @@ class GeminiClient:
             HTTPException: API通信やJSON解析でエラーが発生した場合
         """
         try:
-            # Gemini APIから応答を取得
+            # Bedrock APIから応答を取得
             raw_response = await self.generate_content(prompt)
 
             # JSONブロックを抽出（```json ... ``` の部分）

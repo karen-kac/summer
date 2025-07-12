@@ -1,7 +1,7 @@
-from .client.gemini_client import GeminiClient
+from .client.bedrock_client import BedrockClient
 from .theme_repository import ThemeRepository
 
 __all__ = [
     ThemeRepository.__name__,
-    GeminiClient.__name__,
+    BedrockClient.__name__,
 ]
