@@ -29,7 +29,7 @@ interface DashboardPageProps {
   onViewAllProjects: () => void;
   onOpenAITutor: () => void;
   onViewRecords: () => void;
-  onViewLearning: () => void;
+  onOpenSettings: () => void;
   onSelectSavedTheme: (theme: ResearchTheme) => void;
 }
 
@@ -47,7 +47,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
   onViewAllProjects,
   onOpenAITutor,
   onViewRecords,
-  onViewLearning,
+  onOpenSettings,
   onSelectSavedTheme
 }) => {
   const getGradeDisplayName = (grade: string) => {
@@ -181,13 +181,13 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
       <div className="quick-actions-row">
         <button className="quick-action-btn" onClick={onOpenAITutor}>
           <span className="qa-icon">🤖</span>
-          <span className="qa-label">AI先生</span>
+          <span className="qa-label">使い方</span>
         </button>
         <button className="quick-action-btn" onClick={onViewRecords}>
           <span className="qa-icon">📝</span>
           <span className="qa-label">記録カレンダー</span>
         </button>
-        <button className="quick-action-btn" onClick={onViewLearning}>
+        <button className="quick-action-btn" onClick={onOpenSettings}>
           <span className="qa-icon">⚙️</span>
           <span className="qa-label">設定</span>
         </button>

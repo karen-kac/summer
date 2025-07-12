@@ -21,6 +21,8 @@ import ThemeResultsPage from './pages/ThemeResultsPage';
 import SelectedThemePage from './pages/SelectedThemePage';
 import ActiveProjectPage from './pages/ActiveProjectPage';
 import RecordCalendarPage from './pages/RecordCalendarPage';
+import UsagePage from './pages/UsagePage';
+import SettingsPage from './pages/SettingsPage';
 
 import type { Record, UserProfile, ResearchProject, ResearchTheme, UserStats, Achievement } from './types';
 import './styles/Common.css';
@@ -131,17 +133,15 @@ const DashboardPageWrapper: React.FC = () => {
   };
 
   const handleOpenAITutor = () => {
-    console.log('Open AI tutor');
-    // TODO: AIチューター画面に遷移
+    navigate('/usage');
   };
 
   const handleViewRecords = () => {
     navigate('/records');
   };
 
-  const handleViewLearning = () => {
-    console.log('View learning content');
-    // TODO: 学習コンテンツ画面に遷移
+  const handleOpenSettings = () => {
+    navigate('/settings');
   };
 
   const handleSelectSavedTheme = (theme: ResearchTheme) => {
@@ -165,7 +165,7 @@ const DashboardPageWrapper: React.FC = () => {
       onViewAllProjects={handleViewAllProjects}
       onOpenAITutor={handleOpenAITutor}
       onViewRecords={handleViewRecords}
-      onViewLearning={handleViewLearning}
+      onOpenSettings={handleOpenSettings}
       onSelectSavedTheme={handleSelectSavedTheme}
     />
   );
@@ -366,6 +366,30 @@ const RecordCalendarPageWrapper: React.FC = () => {
   );
 };
 
+const UsagePageWrapper: React.FC = () => {
+  const navigate = useNavigate();
+
+  const handleBackToDashboard = () => {
+    navigate('/dashboard');
+  };
+
+  return (
+    <UsagePage onBackToDashboard={handleBackToDashboard} />
+  );
+};
+
+const SettingsPageWrapper: React.FC = () => {
+  const navigate = useNavigate();
+
+  const handleBackToDashboard = () => {
+    navigate('/dashboard');
+  };
+
+  return (
+    <SettingsPage onBackToDashboard={handleBackToDashboard} />
+  );
+};
+
 // ルーターの設定
 const router = createBrowserRouter([
   {
@@ -411,6 +435,14 @@ const router = createBrowserRouter([
       {
         path: 'records',
         element: <RecordCalendarPageWrapper />,
+      },
+      {
+        path: 'usage',
+        element: <UsagePageWrapper />,
+      },
+      {
+        path: 'settings',
+        element: <SettingsPageWrapper />,
       },
     ],
   },
