@@ -10,7 +10,7 @@ from models.auth import (
 )
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/api/auth", tags=["frontend-auth"])
+router = APIRouter(prefix="/auth", tags=["frontend-auth"])
 security = HTTPBearer()
 
 def get_auth_service():
@@ -34,16 +34,16 @@ async def login(request: LoginRequest, auth_service = Depends(get_auth_service))
             username=request.email,  # emailでログイン（Email alias対応）
             password=request.password
         )
-        
+
         if not result['success']:
             raise HTTPException(
                 status_code=401,
                 detail=result.get('message', 'Authentication failed')
             )
-        
+
         # フロントエンド互換のレスポンスを作成
         user_info = auth_service.get_user_profile(result['access_token'])
-        
+
         user = User(
             id=user_info.get('username', 'user-1'),
             email=user_info.get('attributes', {}).get('email', request.email),
@@ -54,7 +54,7 @@ async def login(request: LoginRequest, auth_service = Depends(get_auth_service))
             createdAt=datetime.now().isoformat(),
             updatedAt=datetime.now().isoformat()
         )
-        
+
         return FrontendAuthResponse(
             success=True,
             message="Login successful",
@@ -62,7 +62,7 @@ async def login(request: LoginRequest, auth_service = Depends(get_auth_service))
             token=result['access_token'],
             refreshToken=result.get('refresh_token')
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -79,40 +79,40 @@ async def signup(request: SignupRequest, auth_service = Depends(get_auth_service
             email=request.email,
             password=request.password
         )
-        
+
         if not signup_result['success']:
             raise HTTPException(
                 status_code=400,
                 detail=signup_result.get('message', 'Registration failed')
             )
-        
+
         # 自動確認（メール検証スキップ）
         confirm_result = auth_service.confirm_registration(
             username=request.name,  # nameをusernameとして使用
             confirmation_code="123456"
         )
-        
+
         if not confirm_result['success']:
             raise HTTPException(
                 status_code=400,
                 detail="Account confirmation failed"
             )
-        
+
         # 自動ログイン
         login_result = auth_service.authenticate_user(
             username=request.name,  # nameをusernameとして使用
             password=request.password
         )
-        
+
         if not login_result['success']:
             raise HTTPException(
                 status_code=400,
                 detail="Auto-login failed"
             )
-        
+
         # ユーザー情報取得
         user_info = auth_service.get_user_profile(login_result['access_token'])
-        
+
         user = User(
             id=user_info.get('username', request.name),
             email=request.email,
@@ -121,7 +121,7 @@ async def signup(request: SignupRequest, auth_service = Depends(get_auth_service
             createdAt=datetime.now().isoformat(),
             updatedAt=datetime.now().isoformat()
         )
-        
+
         return FrontendAuthResponse(
             success=True,
             message="Signup successful",
@@ -129,13 +129,13 @@ async def signup(request: SignupRequest, auth_service = Depends(get_auth_service
             token=login_result['access_token'],
             refreshToken=login_result.get('refresh_token')
         )
-        
+
         if not login_result['success']:
             raise HTTPException(
                 status_code=500,
                 detail="Auto-login failed after registration"
             )
-        
+
         # フロントエンド互換のレスポンスを作成
         user = User(
             id=signup_result.get('user_sub', 'user-' + str(hash(request.email))),
@@ -145,13 +145,13 @@ async def signup(request: SignupRequest, auth_service = Depends(get_auth_service
             createdAt=datetime.now().isoformat(),
             updatedAt=datetime.now().isoformat()
         )
-        
+
         return FrontendAuthResponse(
             user=user,
             token=login_result['access_token'],
             refreshToken=login_result['refresh_token']
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -164,13 +164,13 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
     try:
         access_token = credentials.credentials
         result = auth_service.get_user_profile(access_token)
-        
+
         if not result['success']:
             raise HTTPException(
                 status_code=401,
                 detail="Invalid authentication credentials"
             )
-        
+
         user = User(
             id=result.get('username', 'user-1'),
             email=result.get('attributes', {}).get('email', ''),
@@ -181,9 +181,9 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
             createdAt=datetime.now().isoformat(),
             updatedAt=datetime.now().isoformat()
         )
-        
+
         return user
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -196,12 +196,12 @@ async def logout(credentials: HTTPAuthorizationCredentials = Depends(security), 
     try:
         access_token = credentials.credentials
         result = auth_service.logout_user(access_token)
-        
+
         return ApiResponse(
             success=result['success'],
             message="Logged out successfully" if result['success'] else "Logout failed"
         )
-        
+
     except Exception as e:
         logger.error(f"Logout error: {str(e)}")
         return ApiResponse(
@@ -217,21 +217,21 @@ async def refresh_token(refresh_token: str, auth_service = Depends(get_auth_serv
         # リフレッシュトークンからユーザー名を取得（簡易実装）
         # 実際の実装では、トークンをデコードしてユーザー名を取得
         username = "user@example.com"  # プレースホルダー
-        
+
         result = auth_service.refresh_user_token(
             refresh_token=refresh_token,
             username=username
         )
-        
+
         if not result['success']:
             raise HTTPException(
                 status_code=401,
                 detail="Token refresh failed"
             )
-        
+
         # ユーザー情報を取得
         user_info = auth_service.get_user_profile(result['access_token'])
-        
+
         user = User(
             id=user_info.get('username', 'user-1'),
             email=user_info.get('attributes', {}).get('email', ''),
@@ -242,13 +242,13 @@ async def refresh_token(refresh_token: str, auth_service = Depends(get_auth_serv
             createdAt=datetime.now().isoformat(),
             updatedAt=datetime.now().isoformat()
         )
-        
+
         return FrontendAuthResponse(
             user=user,
             token=result['access_token'],
             refreshToken=refresh_token  # 既存のリフレッシュトークンを返す
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:

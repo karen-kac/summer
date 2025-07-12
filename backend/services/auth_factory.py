@@ -15,10 +15,10 @@ def _get_mock_repository():
 
 class AuthServiceFactory:
     """認証サービスのファクトリークラス"""
-    
+
     _instance: Optional[AuthService] = None
     _test_instance: Optional[AuthService] = None
-    
+
     @classmethod
     def get_auth_service(cls, use_mock: bool = False) -> AuthService:
         """認証サービスのインスタンスを取得"""
@@ -32,17 +32,17 @@ class AuthServiceFactory:
                 cognito_repository = CognitoAuthRepository()
                 cls._instance = AuthService(cognito_repository)
             return cls._instance
-    
+
     @classmethod
     def get_production_service(cls) -> AuthService:
         """本番用認証サービスを取得"""
         return cls.get_auth_service(use_mock=False)
-    
+
     @classmethod
     def get_test_service(cls) -> AuthService:
         """テスト用認証サービスを取得"""
         return cls.get_auth_service(use_mock=True)
-    
+
     @classmethod
     def reset_instances(cls):
         """インスタンスをリセット（テスト用）"""

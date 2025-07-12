@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 class CognitoAuthRepository(AuthRepository):
     """AWS Cognito認証リポジトリ"""
-    
+
     def __init__(self):
         self.client = boto3.client(
             'cognito-idp',
@@ -24,7 +24,7 @@ class CognitoAuthRepository(AuthRepository):
         self.user_pool_id = os.getenv('COGNITO_USER_POOL_ID')
         self.client_id = os.getenv('COGNITO_CLIENT_ID')
         self.client_secret = os.getenv('COGNITO_CLIENT_SECRET')
-    
+
     def sign_up(self, name: str, email: str, password: str) -> Dict:
         """新規ユーザー登録（メール検証なし）"""
         try:
@@ -32,7 +32,7 @@ class CognitoAuthRepository(AuthRepository):
                 {'Name': 'email', 'Value': email},
                 {'Name': 'email_verified', 'Value': 'true'}  # メール検証済みとして設定
             ]
-            
+
             # Admin APIを使用してユーザーを直接作成（確認済み状態で）
             response = self.client.admin_create_user(
                 UserPoolId=self.user_pool_id,
@@ -41,7 +41,7 @@ class CognitoAuthRepository(AuthRepository):
                 TemporaryPassword=password,
                 MessageAction='SUPPRESS'  # メール送信を抑制
             )
-            
+
             # 一時パスワードを永続パスワードに設定
             self.client.admin_set_user_password(
                 UserPoolId=self.user_pool_id,
@@ -49,14 +49,14 @@ class CognitoAuthRepository(AuthRepository):
                 Password=password,
                 Permanent=True
             )
-            
+
             logger.info(f"User {name} (email: {email}) signed up successfully without email verification")
             return {
                 'success': True,
                 'user_sub': response['User']['Username'],
                 'confirmation_required': False  # 確認不要
             }
-            
+
         except ClientError as e:
             error_code = e.response['Error']['Code']
             logger.error(f"Sign up failed for {name} (email: {email}): {error_code}")
@@ -65,7 +65,7 @@ class CognitoAuthRepository(AuthRepository):
                 'error': error_code,
                 'message': e.response['Error']['Message']
             }
-            
+
         except Exception as e:
             logger.error(f"Sign up failed for {name} (email: {email}): {str(e)}")
             return {
@@ -73,7 +73,7 @@ class CognitoAuthRepository(AuthRepository):
                 'error': 'InternalError',
                 'message': 'An unexpected error occurred during sign up.'
             }
-    
+
     def confirm_sign_up(self, username: str, confirmation_code: str) -> Dict:
         """メール確認（スキップ - 常に成功を返す）"""
         logger.info(f"Email confirmation skipped for {username}")
@@ -81,7 +81,7 @@ class CognitoAuthRepository(AuthRepository):
             'success': True,
             'message': 'Email confirmation not required'
         }
-    
+
     def sign_in(self, username: str, password: str) -> Dict:
         """ユーザーサインイン"""
         try:
@@ -94,7 +94,7 @@ class CognitoAuthRepository(AuthRepository):
                     'SECRET_HASH': self._get_secret_hash(username)
                 }
             )
-            
+
             # MFA等のチャレンジが必要な場合
             if 'ChallengeName' in response:
                 return {
@@ -103,11 +103,11 @@ class CognitoAuthRepository(AuthRepository):
                     'challenge_name': response['ChallengeName'],
                     'session': response['Session']
                 }
-            
+
             # 正常にサインイン完了
             auth_result = response['AuthenticationResult']
             logger.info(f"User {username} signed in successfully")
-            
+
             return {
                 'success': True,
                 'access_token': auth_result['AccessToken'],
@@ -115,7 +115,7 @@ class CognitoAuthRepository(AuthRepository):
                 'refresh_token': auth_result['RefreshToken'],
                 'expires_in': auth_result['ExpiresIn']
             }
-            
+
         except ClientError as e:
             error_code = e.response['Error']['Code']
             logger.error(f"Sign in failed for {username}: {error_code}")
@@ -124,7 +124,7 @@ class CognitoAuthRepository(AuthRepository):
                 'error': error_code,
                 'message': e.response['Error']['Message']
             }
-    
+
     def refresh_token(self, refresh_token: str, username: str) -> Dict:
         """リフレッシュトークンで新しいアクセストークンを取得"""
         try:
@@ -136,7 +136,7 @@ class CognitoAuthRepository(AuthRepository):
                     'SECRET_HASH': self._get_secret_hash(username)
                 }
             )
-            
+
             auth_result = response['AuthenticationResult']
             return {
                 'success': True,
@@ -144,7 +144,7 @@ class CognitoAuthRepository(AuthRepository):
                 'id_token': auth_result['IdToken'],
                 'expires_in': auth_result['ExpiresIn']
             }
-            
+
         except ClientError as e:
             error_code = e.response['Error']['Code']
             logger.error(f"Token refresh failed: {error_code}")
@@ -153,22 +153,22 @@ class CognitoAuthRepository(AuthRepository):
                 'error': error_code,
                 'message': e.response['Error']['Message']
             }
-    
+
     def get_user_info(self, access_token: str) -> Dict:
         """アクセストークンからユーザー情報を取得"""
         try:
             response = self.client.get_user(AccessToken=access_token)
-            
+
             user_attributes = {}
             for attr in response['UserAttributes']:
                 user_attributes[attr['Name']] = attr['Value']
-            
+
             return {
                 'success': True,
                 'username': response['Username'],
                 'attributes': user_attributes
             }
-            
+
         except ClientError as e:
             error_code = e.response['Error']['Code']
             logger.error(f"Get user info failed: {error_code}")
@@ -177,13 +177,13 @@ class CognitoAuthRepository(AuthRepository):
                 'error': error_code,
                 'message': e.response['Error']['Message']
             }
-    
+
     def sign_out(self, access_token: str) -> Dict:
         """ユーザーサインアウト"""
         try:
             self.client.global_sign_out(AccessToken=access_token)
             return {'success': True}
-            
+
         except ClientError as e:
             error_code = e.response['Error']['Code']
             logger.error(f"Sign out failed: {error_code}")
@@ -192,7 +192,7 @@ class CognitoAuthRepository(AuthRepository):
                 'error': error_code,
                 'message': e.response['Error']['Message']
             }
-    
+
     def forgot_password(self, username: str) -> Dict:
         """パスワードリセット開始"""
         try:
@@ -201,9 +201,9 @@ class CognitoAuthRepository(AuthRepository):
                 Username=username,
                 SecretHash=self._get_secret_hash(username)
             )
-            
+
             return {'success': True}
-            
+
         except ClientError as e:
             error_code = e.response['Error']['Code']
             logger.error(f"Forgot password failed for {username}: {error_code}")
@@ -212,7 +212,7 @@ class CognitoAuthRepository(AuthRepository):
                 'error': error_code,
                 'message': e.response['Error']['Message']
             }
-    
+
     def confirm_forgot_password(self, username: str, confirmation_code: str, new_password: str) -> Dict:
         """パスワードリセット確定"""
         try:
@@ -223,9 +223,9 @@ class CognitoAuthRepository(AuthRepository):
                 Password=new_password,
                 SecretHash=self._get_secret_hash(username)
             )
-            
+
             return {'success': True}
-            
+
         except ClientError as e:
             error_code = e.response['Error']['Code']
             logger.error(f"Confirm forgot password failed for {username}: {error_code}")
@@ -234,17 +234,17 @@ class CognitoAuthRepository(AuthRepository):
                 'error': error_code,
                 'message': e.response['Error']['Message']
             }
-    
+
     def _get_secret_hash(self, username: str) -> str:
         """SECRET_HASHを生成（Client Secretが設定されている場合）"""
         if not self.client_secret:
             return ""
-        
+
         message = username + self.client_id
         dig = hmac.new(
             str(self.client_secret).encode('utf-8'),
             msg=str(message).encode('utf-8'),
             digestmod=hashlib.sha256
         ).digest()
-        
+
         return base64.b64encode(dig).decode()
