@@ -45,7 +45,7 @@ async def health_check():
     try:
         health_status = {
             "status": "healthy",
-            "timestamp": "2024-01-01T00:00:00Z",
+            "timestamp": datetime.utcnow().isoformat() + "Z",
             "services": {}
         }
 
