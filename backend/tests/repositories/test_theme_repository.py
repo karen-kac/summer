@@ -19,7 +19,7 @@ def sample_user_profile():
 @pytest.mark.asyncio
 async def test_generate_themes_calls_dependencies_correctly(sample_user_profile):
     mock_prompt_builder = MagicMock()
-    mock_gemini_client = AsyncMock()
+    mock_bedrock_client = AsyncMock()
 
     # build_suggest_themes_promptの戻り値を設定
     mock_prompt_builder.build_suggest_themes_prompt.return_value = (
@@ -27,10 +27,10 @@ async def test_generate_themes_calls_dependencies_correctly(sample_user_profile)
     )
 
     # post_promptの戻り値を設定
-    mock_gemini_client.post_prompt.return_value = [{"title": "Mock Theme"}]
+    mock_bedrock_client.post_prompt.return_value = [{"title": "Mock Theme"}]
 
     repository = ThemeRepository(
-        prompt_builder=mock_prompt_builder, client=mock_gemini_client
+        prompt_builder=mock_prompt_builder, client=mock_bedrock_client
     )
 
     result = await repository.generate_themes(sample_user_profile)
@@ -40,8 +40,8 @@ async def test_generate_themes_calls_dependencies_correctly(sample_user_profile)
         sample_user_profile
     )
 
-    # GeminiClient.post_promptが正しい引数で呼び出されたことを確認
-    mock_gemini_client.post_prompt.assert_called_once_with("mocked prompt string")
+    # BedrockClient.post_promptが正しい引数で呼び出されたことを確認
+    mock_bedrock_client.post_prompt.assert_called_once_with("mocked prompt string")
 
     # post_promptの戻り値がそのまま返されたことを確認
     assert result == [{"title": "Mock Theme"}]

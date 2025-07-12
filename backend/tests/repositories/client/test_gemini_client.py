@@ -4,7 +4,7 @@ import json
 import re
 from unittest.mock import AsyncMock, patch
 from fastapi import HTTPException
-from repositories.client.gemini_client import GeminiClient
+from repositories.client.bedrock_client import BedrockClient
 
 
 @pytest.fixture(autouse=True)
