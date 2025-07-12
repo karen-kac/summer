@@ -51,7 +51,7 @@ const ActiveProjectPage: React.FC<ActiveProjectPageProps> = ({
   const [showPhotoModal, setShowPhotoModal] = useState(false);
 
   // AppContextからユーザー情報を取得
-  const { authState, loadUserRecords } = useApp();
+  const { authState, loadUserRecords, loadDashboardData } = useApp();
 
   // AIが生成したステップをStepTemplateに変換
   const convertAIStepsToTemplate = (aiSteps: AIResearchStep[]): StepTemplate[] => {
@@ -624,22 +624,14 @@ const ActiveProjectPage: React.FC<ActiveProjectPageProps> = ({
       console.log('✅ 記録作成成功:', response);
 
       // 成功通知
-      const userChoice = window.confirm('記録が正常に保存されました！\n\nカレンダーページで確認しますか？');
+      alert('記録が正常に保存されました！');
 
-      if (userChoice) {
-        // 記録一覧を更新してからカレンダーページに遷移
-        setTimeout(async () => {
-          await loadUserRecords();
-          console.log('📚 記録作成後の記録一覧を更新しました');
-          navigate('/records');
-        }, 1000);
-      } else {
-        // 記録一覧を更新（少し待機してから再読み込み）
-        setTimeout(async () => {
-          await loadUserRecords();
-          console.log('📚 記録作成後の記録一覧を更新しました');
-        }, 1000);
-      }
+      // 記録一覧とダッシュボードを更新（少し待機してから再読み込み）
+      setTimeout(async () => {
+        await loadUserRecords();
+        await loadDashboardData();
+        console.log('📚 記録作成後の記録一覧とダッシュボードを更新しました');
+      }, 1000);
 
       // モーダルを閉じる
       handleCloseRecordModal();
@@ -746,22 +738,14 @@ const ActiveProjectPage: React.FC<ActiveProjectPageProps> = ({
       });
 
       // 成功通知
-      const userChoice = window.confirm('写真が正常に保存されました！\n\nカレンダーページで確認しますか？');
+      alert('写真が正常に保存されました！');
 
-      if (userChoice) {
-        // 記録一覧を更新してからカレンダーページに遷移
-        setTimeout(async () => {
-          await loadUserRecords();
-          console.log('📚 写真記録作成後の記録一覧を更新しました');
-          navigate('/records');
-        }, 1500);
-      } else {
-        // 記録一覧を更新（少し待機してから再読み込み）
-        setTimeout(async () => {
-          await loadUserRecords();
-          console.log('📚 写真記録作成後の記録一覧を更新しました');
-        }, 1500);
-      }
+      // 記録一覧とダッシュボードを更新（少し待機してから再読み込み）
+      setTimeout(async () => {
+        await loadUserRecords();
+        await loadDashboardData();
+        console.log('📚 写真記録作成後の記録一覧とダッシュボードを更新しました');
+      }, 1500);
 
       // モーダルを閉じる
       handleClosePhotoModal();

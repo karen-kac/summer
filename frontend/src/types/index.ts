@@ -185,6 +185,7 @@ export interface Record {
   locationInfo?: { [key: string]: any };
   createdAt: string;
   updatedAt: string;
+  media?: any[]; // APIからのmedia配列
 }
 
 export interface Media {

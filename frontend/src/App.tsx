@@ -110,6 +110,8 @@ const DashboardPageWrapper: React.FC = () => {
     userProfile,
     activeProjects,
     pastProjects,
+    userStats,
+    recentAchievements,
     todaysTasks,
     savedThemes,
     savedThemesLoading,
@@ -189,8 +191,8 @@ const DashboardPageWrapper: React.FC = () => {
       userProfile={userProfile}
       activeProjects={activeProjects}
       pastProjects={pastProjects}
-      userStats={defaultUserStats}
-      recentAchievements={defaultRecentAchievements}
+      userStats={userStats}
+      recentAchievements={recentAchievements}
       todaysTasks={todaysTasks}
       savedThemes={savedThemes}
       savedThemesLoading={savedThemesLoading}

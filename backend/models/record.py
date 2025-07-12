@@ -70,9 +70,9 @@ class Record(DynamoDBBaseModel):
         date_str = record_date.strftime("%Y-%m-%d")
         now = datetime.now()
 
-        # 時系列でソートされるGSI1SKを作成（新しい記録が最初に来るよう逆順のタイムスタンプを使用）
-        timestamp = now.strftime("%Y%m%d%H%M%S")
-        gsi1_sk = f"RECORD#{timestamp}#{record_id}"
+        # 時系列でソートされるGSI1SKを作成（新しい記録が最初に来るよう）
+        # record_idには既にタイムスタンプが含まれているため、それを使用してソート可能にする
+        gsi1_sk = f"RECORD#{record_id}"
 
         return cls(
             PK=KeyBuilder.project_pk(project_id),

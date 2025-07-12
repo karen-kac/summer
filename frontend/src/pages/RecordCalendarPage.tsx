@@ -31,23 +31,52 @@ const RecordCalendarPage: React.FC<RecordCalendarPageProps> = ({
   onAddRecord,
   onViewRecord
 }) => {
-  const { loadUserRecords } = useApp();
+  const { loadUserRecords, authState } = useApp();
 
-  // 記録データの読み込み状況をログ出力
-  console.log('📅 RecordCalendarPage表示:', {
+  // 🔍 デバッグ情報を詳しく出力
+  console.log('📅 RecordCalendarPage表示 - 詳細デバッグ:', {
+    // 基本情報
     recordsCount: records.length,
     schedulesCount: schedules.length,
     activeProjectsCount: activeProjects.length,
-    records: records.map(r => ({
+
+    // 認証情報
+    isAuthenticated: authState.isAuthenticated,
+    userId: authState.user?.id,
+
+    // 現在の日付
+    currentDate: new Date(),
+    currentDateString: new Date().toLocaleDateString('ja-JP'),
+
+    // 記録データの詳細
+    recordsDetails: records.map(r => ({
       id: r.id,
       title: r.title,
       recordType: r.recordType,
       recordDate: r.recordDate,
+      recordDateAsDate: new Date(r.recordDate),
+      recordDateString: new Date(r.recordDate).toLocaleDateString('ja-JP'),
       hasImages: !!(r.data?.images && r.data.images.length > 0),
       imageCount: r.data?.images?.length || 0,
       dataStructure: r.data ? Object.keys(r.data) : [],
-      fullData: r.data, // データ全体を確認
-      fullRecord: r // 記録全体を確認
+      fullRecord: r
+    })),
+
+    // 今日の記録があるかチェック
+    todayString: new Date().toLocaleDateString('ja-JP'),
+    recordsToday: records.filter(r => {
+      const recordDate = new Date(r.recordDate);
+      const today = new Date();
+      return recordDate.toDateString() === today.toDateString();
+    }).length,
+
+    // 12月19日の記録があるかチェック
+    testDateString: '2024-12-19',
+    recordsOn1219: records.filter(r => r.recordDate.startsWith('2024-12-19')).length,
+    recordsOn1219Details: records.filter(r => r.recordDate.startsWith('2024-12-19')).map(r => ({
+      title: r.title,
+      recordDate: r.recordDate,
+      recordType: r.recordType
     }))
   });
 
@@ -64,7 +93,46 @@ const RecordCalendarPage: React.FC<RecordCalendarPageProps> = ({
       lastUpdate: new Date().toLocaleTimeString()
     });
   }, [records]);
-  const [currentDate, setCurrentDate] = useState(new Date());
+
+  // 📅 記録データに基づいて適切な月を表示
+  const [currentDate, setCurrentDate] = useState(() => {
+    // 初期値は今日の日付
+    return new Date();
+  });
+
+  // 記録データが更新されたときに、最新の記録がある月を表示するように調整
+  useEffect(() => {
+    if (records.length > 0) {
+      // 最新の記録の日付を取得
+      const sortedRecords = [...records].sort((a, b) => 
+        new Date(b.recordDate).getTime() - new Date(a.recordDate).getTime()
+      );
+      
+      const latestRecord = sortedRecords[0];
+      const latestRecordDate = new Date(latestRecord.recordDate);
+      
+      console.log('📅 最新記録に基づいてカレンダー月を設定:', {
+        latestRecordTitle: latestRecord.title,
+        latestRecordDate: latestRecord.recordDate,
+        parsedDate: latestRecordDate,
+        currentCalendarMonth: currentDate.getMonth() + 1,
+        currentCalendarYear: currentDate.getFullYear(),
+        latestRecordMonth: latestRecordDate.getMonth() + 1,
+        latestRecordYear: latestRecordDate.getFullYear()
+      });
+      
+      // 現在表示している月と最新記録の月が異なる場合、最新記録の月に移動
+      if (currentDate.getFullYear() !== latestRecordDate.getFullYear() || 
+          currentDate.getMonth() !== latestRecordDate.getMonth()) {
+        console.log('📅 カレンダーを最新記録の月に移動:', {
+          from: `${currentDate.getFullYear()}年${currentDate.getMonth() + 1}月`,
+          to: `${latestRecordDate.getFullYear()}年${latestRecordDate.getMonth() + 1}月`
+        });
+        setCurrentDate(new Date(latestRecordDate.getFullYear(), latestRecordDate.getMonth(), 1));
+      }
+    }
+  }, [records]);
+
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [showRecordModal, setShowRecordModal] = useState(false);
   const [newRecordType, setNewRecordType] = useState<'observation' | 'experiment' | 'note'>('observation');
@@ -104,6 +172,15 @@ const RecordCalendarPage: React.FC<RecordCalendarPageProps> = ({
     const days: CalendarDay[] = [];
     const current = new Date(startDate);
 
+    console.log('📅 カレンダー生成開始:', {
+      year: year,
+      month: month + 1,
+      monthName: getMonthName(currentDate),
+      startDate: startDate.toLocaleDateString('ja-JP'),
+      endDate: endDate.toLocaleDateString('ja-JP'),
+      totalRecords: records.length
+    });
+
     while (current <= endDate) {
       // 現地時間で日付文字列を生成
       const localDateStr = current.getFullYear() + '-' +
@@ -113,11 +190,23 @@ const RecordCalendarPage: React.FC<RecordCalendarPageProps> = ({
       const dayRecords = records.filter(r => r.recordDate.startsWith(localDateStr));
       const daySchedules = schedules.filter(s => s.scheduledAt && s.scheduledAt.startsWith(localDateStr));
 
-      // この日の記録に画像があるかデバッグ
+      // 🔍 各日の記録データを詳しくログ出力
       if (dayRecords.length > 0) {
+        console.log(`📅 ${localDateStr}の記録詳細:`, {
+          totalRecords: dayRecords.length,
+          records: dayRecords.map(r => ({
+            id: r.id,
+            title: r.title,
+            recordType: r.recordType,
+            recordDate: r.recordDate,
+            hasImages: !!(r.data?.images && r.data.images.length > 0),
+            imageCount: r.data?.images?.length || 0
+          }))
+        });
+
         const recordsWithImages = dayRecords.filter(r => r.data?.images && r.data.images.length > 0);
         if (recordsWithImages.length > 0) {
-          console.log(`📅 ${localDateStr}の画像付き記録:`, {
+          console.log(`📷 ${localDateStr}の画像付き記録:`, {
             totalRecords: dayRecords.length,
             recordsWithImages: recordsWithImages.length,
             records: recordsWithImages.map(r => ({
@@ -140,6 +229,21 @@ const RecordCalendarPage: React.FC<RecordCalendarPageProps> = ({
 
       current.setDate(current.getDate() + 1);
     }
+
+    // 🔍 カレンダー生成結果をログ出力
+    const totalRecordsInCalendar = days.reduce((sum, day) => sum + day.records.length, 0);
+    const daysWithRecords = days.filter(day => day.records.length > 0);
+
+    console.log('📅 カレンダー生成完了:', {
+      totalDays: days.length,
+      totalRecordsInCalendar: totalRecordsInCalendar,
+      daysWithRecords: daysWithRecords.length,
+      daysWithRecordsDetails: daysWithRecords.map(day => ({
+        date: day.date.toLocaleDateString('ja-JP'),
+        recordsCount: day.records.length,
+        recordTitles: day.records.map(r => r.title)
+      }))
+    });
 
     return days;
   };
@@ -262,6 +366,33 @@ const RecordCalendarPage: React.FC<RecordCalendarPageProps> = ({
            image.base64Data.length > 0;
   };
 
+  // 記録から画像を取得する関数（record.data.imagesのみ使用）
+  const getAllImages = (record: Record) => {
+    const images: any[] = [];
+    
+    // record.data.images から取得（統一方式）
+    if (record.data?.images && Array.isArray(record.data.images)) {
+      record.data.images.forEach((img: any) => {
+        if (isValidImage(img)) {
+          images.push(img);
+        }
+      });
+    }
+    
+    console.log(`📷 記録 ${record.title} の画像取得:`, {
+      recordId: record.id,
+      dataImages: record.data?.images?.length || 0,
+      validImages: images.length,
+      images: images.map(img => ({
+        filename: img.filename,
+        contentType: img.contentType,
+        base64Length: img.base64Data?.length || 0
+      }))
+    });
+    
+    return images;
+  };
+
   // 画像拡大表示を開く
   const handleOpenImageModal = (imageIndex: number) => {
     setSelectedImageIndex(imageIndex);
@@ -277,7 +408,7 @@ const RecordCalendarPage: React.FC<RecordCalendarPageProps> = ({
   // 次の画像を表示
   const handleNextImage = () => {
     if (selectedRecord && selectedImageIndex !== null) {
-      const validImages = selectedRecord.data.images.filter(isValidImage);
+      const validImages = getAllImages(selectedRecord);
       const nextIndex = (selectedImageIndex + 1) % validImages.length;
       setSelectedImageIndex(nextIndex);
     }
@@ -286,7 +417,7 @@ const RecordCalendarPage: React.FC<RecordCalendarPageProps> = ({
   // 前の画像を表示
   const handlePrevImage = () => {
     if (selectedRecord && selectedImageIndex !== null) {
-      const validImages = selectedRecord.data.images.filter(isValidImage);
+      const validImages = getAllImages(selectedRecord);
       const prevIndex = selectedImageIndex === 0
         ? validImages.length - 1
         : selectedImageIndex - 1;
@@ -301,24 +432,40 @@ const RecordCalendarPage: React.FC<RecordCalendarPageProps> = ({
           ← 戻る
         </button>
         <h1 className="page-title">📅 記録カレンダー</h1>
-        <button
-          className="reload-btn"
-          onClick={() => {
-            console.log('🔄 手動で記録データを再読み込み');
-            loadUserRecords();
-          }}
-          style={{
-            padding: '8px 16px',
-            background: '#2196f3',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer',
-            fontSize: '12px'
-          }}
-        >
-          🔄 記録再読み込み
-        </button>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button
+            className="reload-btn"
+            onClick={() => {
+              console.log('🔄 手動で記録データを再読み込み');
+              loadUserRecords();
+            }}
+            style={{
+              padding: '8px 16px',
+              background: '#2196f3',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '12px'
+            }}
+          >
+            🔄 記録再読み込み
+          </button>
+          <button
+            onClick={() => setCurrentDate(new Date())}
+            style={{
+              padding: '8px 16px',
+              background: '#4caf50',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '12px'
+            }}
+          >
+            📅 今月
+          </button>
+        </div>
       </div>
 
       <div className="calendar-container">
@@ -420,9 +567,12 @@ const RecordCalendarPage: React.FC<RecordCalendarPageProps> = ({
                       <div className="record-content">
                         <div className="record-title">
                           {record.title}
-                          {record.data?.images && record.data.images.filter(isValidImage).length > 0 && (
-                            <span className="record-image-indicator">📷 {record.data.images.filter(isValidImage).length}枚</span>
-                          )}
+                          {(() => {
+                            const allImages = getAllImages(record);
+                            return allImages.length > 0 && (
+                              <span className="record-image-indicator">📷 {allImages.length}枚</span>
+                            );
+                          })()}
                         </div>
                         <div className="record-preview">{record.content.substring(0, 50)}...</div>
                         {record.tags && record.tags.length > 0 && (
@@ -433,50 +583,53 @@ const RecordCalendarPage: React.FC<RecordCalendarPageProps> = ({
                           </div>
                         )}
                         {/* 写真プレビュー */}
-                        {record.data?.images && record.data.images.length > 0 && (
-                          <div className="record-image-preview">
-                            {record.data.images.filter(isValidImage).slice(0, 3).map((image: any, index: number) => {
-                              console.log(`🖼️ プレビュー画像${index + 1}をレンダリング中:`, {
-                                recordTitle: record.title,
-                                image: image,
-                                imageIndex: index,
-                                isValid: isValidImage(image)
-                              });
+                        {(() => {
+                          const allImages = getAllImages(record);
+                          return allImages.length > 0 && (
+                            <div className="record-image-preview">
+                              {allImages.slice(0, 3).map((image: any, index: number) => {
+                                console.log(`🖼️ プレビュー画像${index + 1}をレンダリング中:`, {
+                                  recordTitle: record.title,
+                                  image: image,
+                                  imageIndex: index,
+                                  isValid: isValidImage(image)
+                                });
 
-                              const imageUri = getImageDataUri(image);
-                              console.log(`🔗 生成されたURI:`, imageUri ? `${imageUri.substring(0, 50)}...` : 'null');
+                                const imageUri = getImageDataUri(image);
+                                console.log(`🔗 生成されたURI:`, imageUri ? `${imageUri.substring(0, 50)}...` : 'null');
 
-                              if (!imageUri) {
-                                console.warn(`⚠️ 画像${index + 1}のURIが生成できませんでした`);
-                                return null;
-                              }
+                                if (!imageUri) {
+                                  console.warn(`⚠️ 画像${index + 1}のURIが生成できませんでした`);
+                                  return null;
+                                }
 
-                              return (
-                                <div key={index} className="record-preview-image">
-                                  <img
-                                    src={imageUri}
-                                    alt={`プレビュー ${index + 1}`}
-                                    className="record-preview-img"
-                                    onLoad={() => console.log(`✅ プレビュー画像${index + 1}の読み込み成功`)}
-                                    onError={(e) => {
-                                      console.error(`❌ プレビュー画像${index + 1}の読み込み失敗:`, e);
-                                      console.error('エラー詳細:', {
-                                        src: imageUri,
-                                        image: image,
-                                        target: e.target
-                                      });
-                                    }}
-                                  />
+                                return (
+                                  <div key={index} className="record-preview-image">
+                                    <img
+                                      src={imageUri}
+                                      alt={`プレビュー ${index + 1}`}
+                                      className="record-preview-img"
+                                      onLoad={() => console.log(`✅ プレビュー画像${index + 1}の読み込み成功`)}
+                                      onError={(e) => {
+                                        console.error(`❌ プレビュー画像${index + 1}の読み込み失敗:`, e);
+                                        console.error('エラー詳細:', {
+                                          src: imageUri,
+                                          image: image,
+                                          target: e.target
+                                        });
+                                      }}
+                                    />
+                                  </div>
+                                );
+                              })}
+                              {allImages.length > 3 && (
+                                <div className="record-more-images">
+                                  +{allImages.length - 3}
                                 </div>
-                              );
-                            })}
-                            {record.data.images.filter(isValidImage).length > 3 && (
-                              <div className="record-more-images">
-                                +{record.data.images.filter(isValidImage).length - 3}
-                              </div>
-                            )}
-                          </div>
-                        )}
+                              )}
+                            </div>
+                          );
+                        })()}
                       </div>
                       <div className="record-time">
                         {new Date(record.recordDate).toLocaleTimeString('ja-JP', {
@@ -579,190 +732,129 @@ const RecordCalendarPage: React.FC<RecordCalendarPageProps> = ({
         <div className="modal-overlay" onClick={handleCloseRecordDetail}>
           <div className="record-detail-modal" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>記録詳細</h3>
+              <h3>
+                {selectedRecord.recordType === 'observation' ? '🔍' :
+                 selectedRecord.recordType === 'experiment' ? '⚗️' :
+                 selectedRecord.recordType === 'photo' ? '📷' : '📝'}
+                {selectedRecord.title}
+              </h3>
               <button className="close-btn" onClick={handleCloseRecordDetail}>
                 ×
               </button>
             </div>
 
             <div className="modal-body">
-              <div className="record-detail-info">
-                <div className="record-detail-meta">
-                  <span className="record-type-badge">
-                    {selectedRecord.recordType === 'observation' ? '🔍 観察記録' :
-                     selectedRecord.recordType === 'experiment' ? '⚗️ 実験記録' :
-                     selectedRecord.recordType === 'photo' ? '📷 写真記録' :
-                     selectedRecord.recordType === 'data' ? '📊 データ記録' : '📝 メモ'}
-                  </span>
-                  <span className="record-date">
-                    {new Date(selectedRecord.recordDate).toLocaleDateString('ja-JP', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                      weekday: 'long'
-                    })} {new Date(selectedRecord.recordDate).toLocaleTimeString('ja-JP', {
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
-                  </span>
+              <div className="record-meta">
+                <div className="record-date">
+                  📅 {new Date(selectedRecord.recordDate).toLocaleDateString('ja-JP', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    weekday: 'long'
+                  })}
                 </div>
-
-                <h4 className="record-detail-title">{selectedRecord.title}</h4>
-
-                <div className="record-detail-content">
-                  <h5>内容</h5>
-                  <p>{selectedRecord.content}</p>
+                <div className="record-time">
+                  🕐 {new Date(selectedRecord.recordDate).toLocaleTimeString('ja-JP', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
                 </div>
+              </div>
 
-                {/* 画像表示 */}
-                {selectedRecord.data?.images && selectedRecord.data.images.filter(isValidImage).length > 0 && (
-                  <div className="record-detail-images">
-                    <h5>写真 ({selectedRecord.data.images.filter(isValidImage).length}枚)</h5>
-                    <div className="record-images-grid">
-                      {selectedRecord.data.images.filter(isValidImage).map((image: any, index: number) => {
-                        console.log(`🖼️ 詳細画像${index + 1}をレンダリング中:`, {
-                          recordTitle: selectedRecord.title,
-                          image: image,
-                          imageIndex: index
-                        });
+              <div className="record-content-detail">
+                <h4>記録内容</h4>
+                <p>{selectedRecord.content}</p>
+              </div>
 
+              {selectedRecord.tags && selectedRecord.tags.length > 0 && (
+                <div className="record-tags-detail">
+                  <h4>タグ</h4>
+                  <div className="tags-list">
+                    {selectedRecord.tags.map((tag, index) => (
+                      <span key={index} className="tag-item">#{tag}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {(() => {
+                const allImages = getAllImages(selectedRecord);
+                return allImages.length > 0 && (
+                  <div className="record-images-detail">
+                    <h4>画像 ({allImages.length}枚)</h4>
+                    <div className="images-grid">
+                      {allImages.map((image: any, index: number) => {
                         const imageUri = getImageDataUri(image);
-                        console.log(`🔗 詳細画像URI:`, imageUri ? `${imageUri.substring(0, 50)}...` : 'null');
-
-                        if (!imageUri) {
-                          console.warn(`⚠️ 詳細画像${index + 1}のURIが生成できませんでした`);
-                          return (
-                            <div key={index} className="record-image-item error">
-                              <div className="image-error">画像を読み込めません</div>
-                              <div className="record-image-filename">{image.filename || `画像${index + 1}`}</div>
-                            </div>
-                          );
-                        }
+                        if (!imageUri) return null;
 
                         return (
-                          <div key={index} className="record-image-item">
+                          <div key={index} className="image-item" onClick={() => handleOpenImageModal(index)}>
                             <img
                               src={imageUri}
-                              alt={`記録画像 ${index + 1}`}
-                              className="record-detail-image"
-                              onClick={() => handleOpenImageModal(index)}
-                              onLoad={() => console.log(`✅ 詳細画像${index + 1}の読み込み成功`)}
-                              onError={(e) => {
-                                console.error(`❌ 詳細画像${index + 1}の読み込み失敗:`, e);
-                                console.error('詳細エラー:', {
-                                  src: imageUri,
-                                  image: image,
-                                  target: e.target
-                                });
-                              }}
+                              alt={`画像 ${index + 1}`}
+                              className="record-detail-img"
                             />
-                            <div className="record-image-filename">{image.filename || `画像${index + 1}`}</div>
                           </div>
                         );
                       })}
                     </div>
                   </div>
-                )}
-
-                {/* タグ表示 */}
-                {selectedRecord.tags && selectedRecord.tags.length > 0 && (
-                  <div className="record-detail-tags">
-                    <h5>タグ</h5>
-                    <div className="tags-list">
-                      {selectedRecord.tags.map((tag, index) => (
-                        <span key={index} className="tag-item">#{tag}</span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* 研究ステップ情報 */}
-                {selectedRecord.data?.stepName && (
-                  <div className="record-detail-step">
-                    <h5>研究ステップ</h5>
-                    <p>{selectedRecord.data.stepName}</p>
-                  </div>
-                )}
-
-                {/* 天気情報 */}
-                {selectedRecord.weatherInfo && (
-                  <div className="record-detail-weather">
-                    <h5>天気情報</h5>
-                    <p>{JSON.stringify(selectedRecord.weatherInfo)}</p>
-                  </div>
-                )}
-
-                {/* 位置情報 */}
-                {selectedRecord.locationInfo && (
-                  <div className="record-detail-location">
-                    <h5>位置情報</h5>
-                    <p>{JSON.stringify(selectedRecord.locationInfo)}</p>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="modal-footer">
-              <button className="close-detail-btn" onClick={handleCloseRecordDetail}>
-                閉じる
-              </button>
+                );
+              })()}
             </div>
           </div>
         </div>
       )}
 
       {/* 画像拡大表示モーダル */}
-      {showImageModal && selectedRecord && selectedImageIndex !== null &&
-       selectedRecord.data?.images && selectedRecord.data.images.filter(isValidImage).length > 0 && (
-        <div className="image-modal-overlay" onClick={handleCloseImageModal}>
-          <div className="image-modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="image-modal-header">
-              <h4>画像 {selectedImageIndex + 1} / {selectedRecord.data.images.filter(isValidImage).length}</h4>
+      {showImageModal && selectedRecord && selectedImageIndex !== null && (
+        <div className="modal-overlay" onClick={handleCloseImageModal}>
+          <div className="image-modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>画像 {selectedImageIndex + 1} / {getAllImages(selectedRecord).length}</h3>
               <button className="close-btn" onClick={handleCloseImageModal}>
                 ×
               </button>
             </div>
 
-            <div className="image-modal-body">
-              {selectedRecord.data.images.filter(isValidImage)[selectedImageIndex] && (
-                <img
-                  src={getImageDataUri(selectedRecord.data.images.filter(isValidImage)[selectedImageIndex])}
-                  alt={`画像 ${selectedImageIndex + 1}`}
-                  className="modal-image"
-                />
-              )}
-            </div>
+            <div className="modal-body">
+              <div className="image-navigation">
+                <button
+                  className="nav-btn prev"
+                  onClick={handlePrevImage}
+                  disabled={getAllImages(selectedRecord).length <= 1}
+                >
+                  ‹
+                </button>
 
-            <div className="image-modal-navigation">
-              {selectedRecord.data.images.filter(isValidImage).length > 1 && (
-                <>
-                  <button
-                    className="nav-btn prev-btn"
-                    onClick={handlePrevImage}
-                    title="前の画像"
-                  >
-                    ◀
-                  </button>
-                  <button
-                    className="nav-btn next-btn"
-                    onClick={handleNextImage}
-                    title="次の画像"
-                  >
-                    ▶
-                  </button>
-                </>
-              )}
-            </div>
+                <div className="image-container">
+                  {(() => {
+                    const validImages = getAllImages(selectedRecord);
+                    const currentImage = validImages[selectedImageIndex];
+                    const imageUri = getImageDataUri(currentImage);
 
-            <div className="image-modal-info">
-              <p>
-                {selectedRecord.data.images.filter(isValidImage)[selectedImageIndex]?.filename || `画像${selectedImageIndex + 1}`}
-              </p>
-              <p className="image-size">
-                {selectedRecord.data.images.filter(isValidImage)[selectedImageIndex]?.size &&
-                  `${Math.round(selectedRecord.data.images.filter(isValidImage)[selectedImageIndex].size / 1024)}KB`
-                }
-              </p>
+                    if (!imageUri) {
+                      return <div className="image-error">画像を読み込めませんでした</div>;
+                    }
+
+                    return (
+                      <img
+                        src={imageUri}
+                        alt={`拡大画像 ${selectedImageIndex + 1}`}
+                        className="expanded-image"
+                      />
+                    );
+                  })()}
+                </div>
+
+                <button
+                  className="nav-btn next"
+                  onClick={handleNextImage}
+                  disabled={getAllImages(selectedRecord).length <= 1}
+                >
+                  ›
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -72,46 +72,61 @@ class RecordRepository:
 
             logger.info(f"📋 記録オブジェクト作成: {record.recordId}")
 
-            # 画像データを処理
-            media_list = []
-            if request.data and 'images' in request.data and self.s3:
+            # 画像データを処理（record.dataに直接保存する統一方式）
+            media_list = []  # 空のリスト（互換性のため）
+            
+            if request.data and 'images' in request.data:
                 images = request.data['images']
-                logger.info(f"📷 画像処理開始: {images}")
+                logger.info(f"📷 画像処理開始 (record.data方式): {len(images) if isinstance(images, list) else 0}件")
 
                 if isinstance(images, list) and len(images) > 0:
                     logger.info(f"📷 画像データを処理中: {len(images)}件")
+                    processed_images = []
 
                     for i, image_data in enumerate(images):
-                        logger.info(f"📷 画像{i+1}処理開始: {image_data}")
+                        logger.info(f"📷 画像{i+1}処理開始: {image_data.keys() if isinstance(image_data, dict) else type(image_data)}")
                         try:
-                            # Base64画像データをS3に保存
-                            media = await self._save_image_to_s3(
-                                user_id=user_id,
-                                project_id=request.projectId,
-                                record_id=record.recordId,
-                                image_data=image_data,
-                                sequence=i + 1
-                            )
+                            # 画像データの検証
+                            if not isinstance(image_data, dict):
+                                logger.error(f"📷 画像データが辞書ではありません: {type(image_data)}")
+                                continue
+                                
+                            if 'base64Data' not in image_data:
+                                logger.error(f"📷 base64Dataが含まれていません: {image_data.keys()}")
+                                continue
+                                
+                            if not image_data['base64Data']:
+                                logger.error(f"📷 base64Dataが空です")
+                                continue
 
-                            if media:
-                                media_list.append(media)
-                                # 記録にメディアIDを追加
-                                record.mediaIds.append(media.mediaId)
-                                logger.info(f"📷 画像保存成功: {media.mediaId}")
-                            else:
-                                logger.error(f"📷 画像保存失敗: インデックス {i}")
+                            # 画像データをそのままrecord.dataに保存（S3には保存しない）
+                            processed_image = {
+                                'filename': image_data.get('filename', f'image_{i+1}.jpg'),
+                                'contentType': image_data.get('contentType', 'image/jpeg'),
+                                'size': image_data.get('size', len(image_data['base64Data'])),
+                                'base64Data': image_data['base64Data']
+                            }
+                            processed_images.append(processed_image)
+                            
+                            logger.info(f"📷 画像処理成功: {processed_image['filename']} ({len(image_data['base64Data'])} chars)")
+                            
                         except Exception as e:
                             logger.error(f"📷 画像処理エラー (インデックス {i}): {e}")
                             logger.error(f"📷 画像データ: {image_data}")
                             continue
+                    
+                    # 処理済み画像データを記録のdataフィールドに保存
+                    if processed_images:
+                        if not record.data:
+                            record.data = {}
+                        record.data['images'] = processed_images
+                        logger.info(f"📷 記録dataに画像データを保存: {len(processed_images)}件")
                 else:
                     logger.warning(f"📷 画像データが無効: {type(images)}, {images}")
-            elif not self.s3:
-                logger.error("📷 S3クライアントが設定されていません")
             else:
-                logger.info("📷 画像データなし")
+                logger.info("📷 画像データが含まれていません")
 
-            logger.info(f"📋 画像処理完了: {len(media_list)}件のメディア作成")
+            logger.info(f"📋 画像処理完了: record.dataに直接保存")
 
             # 記録をDynamoDBに保存
             logger.info(f"📋 記録をDynamoDBに保存中...")
@@ -327,8 +342,21 @@ class RecordRepository:
 
                 # 関連するメディアを取得（署名付きURL付き）
                 media_list = []
-                if record.mediaIds:
-                    media_list = await self._get_media_with_urls(record.mediaIds)
+                
+                # record.dataに画像データがある場合はログだけ出力（フロントエンドで直接使用）
+                if record.data and 'images' in record.data:
+                    images = record.data['images']
+                    if isinstance(images, list):
+                        image_count = len([img for img in images if isinstance(img, dict) and 'base64Data' in img])
+                        if image_count > 0:
+                            logger.info(f"📷 record.dataに{image_count}件の画像データが存在: {record.recordId}")
+                
+                # S3からのメディア取得も試行（本来の処理）
+                if record.mediaIds and not media_list:
+                    s3_media_list = await self._get_media_with_urls(record.mediaIds)
+                    if s3_media_list:
+                        media_list.extend(s3_media_list)
+                        logger.info(f"📷 S3から{len(s3_media_list)}件のメディアを取得: {record.recordId}")
 
                 return RecordResponse(record=record, media=media_list)
             else:
@@ -369,8 +397,21 @@ class RecordRepository:
 
                     # 関連するメディアを取得（署名付きURL付き）
                     media_list = []
-                    if record.mediaIds:
-                        media_list = await self._get_media_with_urls(record.mediaIds)
+                    
+                    # record.dataに画像データがある場合はログだけ出力（フロントエンドで直接使用）
+                    if record.data and 'images' in record.data:
+                        images = record.data['images']
+                        if isinstance(images, list):
+                            image_count = len([img for img in images if isinstance(img, dict) and 'base64Data' in img])
+                            if image_count > 0:
+                                logger.info(f"📷 record.dataに{image_count}件の画像データが存在: {record.recordId}")
+                    
+                    # S3からのメディア取得も試行（本来の処理）
+                    if record.mediaIds and not media_list:
+                        s3_media_list = await self._get_media_with_urls(record.mediaIds)
+                        if s3_media_list:
+                            media_list.extend(s3_media_list)
+                            logger.info(f"📷 S3から{len(s3_media_list)}件のメディアを取得: {record.recordId}")
 
                     records.append(RecordResponse(record=record, media=media_list))
                 except Exception as e:
@@ -412,6 +453,8 @@ class RecordRepository:
                 last_evaluated_key=last_evaluated_key,
                 scan_index_forward=False  # 最新の記録を最初に取得
             )
+            
+            logger.info(f"📊 GSI1クエリ結果: {result['count']}件取得, total_scanned={result['scanned_count']}")
 
             # 記録オブジェクトに変換
             records = []
@@ -421,8 +464,21 @@ class RecordRepository:
 
                     # 関連するメディアを取得（署名付きURL付き）
                     media_list = []
-                    if record.mediaIds:
-                        media_list = await self._get_media_with_urls(record.mediaIds)
+                    
+                    # record.dataに画像データがある場合はログだけ出力（フロントエンドで直接使用）
+                    if record.data and 'images' in record.data:
+                        images = record.data['images']
+                        if isinstance(images, list):
+                            image_count = len([img for img in images if isinstance(img, dict) and 'base64Data' in img])
+                            if image_count > 0:
+                                logger.info(f"📷 record.dataに{image_count}件の画像データが存在: {record.recordId}")
+                    
+                    # S3からのメディア取得も試行（本来の処理）
+                    if record.mediaIds and not media_list:
+                        s3_media_list = await self._get_media_with_urls(record.mediaIds)
+                        if s3_media_list:
+                            media_list.extend(s3_media_list)
+                            logger.info(f"📷 S3から{len(s3_media_list)}件のメディアを取得: {record.recordId}")
 
                     records.append(RecordResponse(record=record, media=media_list))
                 except Exception as e:
@@ -474,8 +530,21 @@ class RecordRepository:
 
                     # 関連するメディアを取得（署名付きURL付き）
                     media_list = []
-                    if record.mediaIds:
-                        media_list = await self._get_media_with_urls(record.mediaIds)
+                    
+                    # record.dataに画像データがある場合はログだけ出力（フロントエンドで直接使用）
+                    if record.data and 'images' in record.data:
+                        images = record.data['images']
+                        if isinstance(images, list):
+                            image_count = len([img for img in images if isinstance(img, dict) and 'base64Data' in img])
+                            if image_count > 0:
+                                logger.info(f"📷 record.dataに{image_count}件の画像データが存在: {record.recordId}")
+                    
+                    # S3からのメディア取得も試行（本来の処理）
+                    if record.mediaIds and not media_list:
+                        s3_media_list = await self._get_media_with_urls(record.mediaIds)
+                        if s3_media_list:
+                            media_list.extend(s3_media_list)
+                            logger.info(f"📷 S3から{len(s3_media_list)}件のメディアを取得: {record.recordId}")
 
                     records.append(RecordResponse(record=record, media=media_list))
                 except Exception as e:

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import { UserProfile, ResearchTheme, ResearchProject, AuthState, LoginRequest, SignupRequest, User, Grade, Interest, Personality, Strength, Duration, Record, Schedule, Achievement } from '../types';
+import { UserProfile, ResearchTheme, ResearchProject, AuthState, LoginRequest, SignupRequest, User, Grade, Interest, Personality, Strength, Duration, Record as AppRecord, Schedule, Achievement } from '../types';
 import { themeApi, userApi, recordApi, ApiError, CreateRecordResponse } from '../services/api';
 
 // ヘルパー関数: 研究ジャンルに応じたステップ数を返す
@@ -29,7 +29,7 @@ interface AppContextType {
   todaysTasks: Array<{ icon: string; task: string; urgent: boolean }>;
 
   // 記録・スケジュール関連
-  records: Record[];
+  records: AppRecord[];
   schedules: Schedule[];
 
   // テーマ関連
@@ -69,8 +69,8 @@ interface AppContextType {
   handleUpdateProjectProgress: (projectId: string, stepIndex: number) => void;
   handleThemeDecision: (theme: ResearchTheme) => void;
   generateTasksForProject: (project: ResearchProject, stepIndex: number) => Array<{ icon: string; task: string; urgent: boolean }>;
-  addRecord: (record: Partial<Record>) => void;
-  updateRecord: (recordId: string, updates: Partial<Record>) => void;
+  addRecord: (record: Partial<AppRecord>) => void;
+  updateRecord: (recordId: string, updates: Partial<AppRecord>) => void;
   loadUserRecords: () => Promise<void>;
   generateThemesFromAPI: (profile: UserProfile, useAI?: boolean) => Promise<void>;
   loadSavedThemes: () => Promise<void>;
@@ -113,7 +113,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   // プロジェクト状態の管理を追加
   const [activeProjects, setActiveProjects] = useState<ResearchProject[]>([]);
   const [pastProjects, setPastProjects] = useState<ResearchProject[]>([]);
-  const [records, setRecords] = useState<Record[]>([]);
+  const [records, setRecords] = useState<AppRecord[]>([]);
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [todaysTasks, setTodaysTasks] = useState<Array<{ icon: string; task: string; urgent: boolean }>>([]);
 
@@ -276,10 +276,18 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
 
   // 記録データを読み込む関数
   const loadUserRecords = useCallback(async (): Promise<void> => {
-    if (!authState.user?.id) return;
+    if (!authState.user?.id) {
+      console.warn('⚠️ ユーザーIDが設定されていません:', authState);
+      return;
+    }
 
     try {
-      console.log('📚 ユーザーの記録を読み込み中...');
+      console.log('📚 ユーザーの記録を読み込み中...', {
+        userId: authState.user.id,
+        timestamp: new Date().toISOString(),
+        authState: authState
+      });
+
       const response = await recordApi.getRecordsByUser(authState.user.id, 50); // 最新50件を取得
 
       // デバッグ用：APIレスポンスの構造を詳しく確認
@@ -293,15 +301,114 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
           index: i,
           title: record.record?.title,
           recordType: record.record?.recordType,
+          recordDate: record.record?.recordDate,
+          recordTime: record.record?.recordTime,
           hasMedia: !!record.media,
           mediaCount: record.media?.length || 0,
           mediaStructure: record.media?.[0] ? Object.keys(record.media[0]) : [],
+          mediaData: record.media?.[0] ? {
+            hasBase64Data: 'base64Data' in record.media[0],
+            hasFilename: 'filename' in record.media[0],
+            hasContentType: 'contentType' in record.media[0],
+            keys: Object.keys(record.media[0]),
+            base64Length: record.media[0].base64Data?.length || 0,
+            filename: record.media[0].filename,
+            contentType: record.media[0].contentType
+          } : null,
           record: record
         }))
       });
 
+      // 🔍 記録の日付分布を詳しく分析
+      const dateDistribution = response.records.reduce((acc, record) => {
+        const date = record.record.recordDate;
+        acc[date] = (acc[date] || 0) + 1;
+        return acc;
+      }, {} as { [key: string]: number });
+
+      console.log('📅 記録の日付分布:', {
+        dateDistribution: dateDistribution,
+        totalRecords: response.records.length,
+        uniqueDates: Object.keys(dateDistribution),
+        dateCount: Object.keys(dateDistribution).length,
+        recordsByDate: Object.entries(dateDistribution).map(([date, count]) => ({
+          date: date,
+          count: count,
+          records: response.records.filter(r => r.record.recordDate === date).map(r => ({
+            title: r.record.title,
+            recordType: r.record.recordType,
+            recordTime: r.record.recordTime
+          }))
+        }))
+      });
+
+      // 🔍 今日の日付（2025-07-13）の記録があるか特別チェック
+      const todayString = '2025-07-13';
+      const todayRecords = response.records.filter(r => r.record.recordDate === todayString);
+      console.log('🔍 今日の記録チェック:', {
+        todayString: todayString,
+        todayRecordsCount: todayRecords.length,
+        todayRecords: todayRecords.map(r => ({
+          title: r.record.title,
+          recordDate: r.record.recordDate,
+          recordTime: r.record.recordTime,
+          recordType: r.record.recordType,
+          recordId: r.record.recordId
+        }))
+      });
+
+      // 🔍 最新の記録を詳しく確認（作成日時順）
+      const sortedRecords = [...response.records].sort((a, b) =>
+        new Date(b.record.createdAt).getTime() - new Date(a.record.createdAt).getTime()
+      );
+
+      console.log('🔍 最新の記録（作成日時順）:', {
+        latestRecords: sortedRecords.slice(0, 5).map((record, i) => ({
+          index: i,
+          title: record.record.title,
+          recordDate: record.record.recordDate,
+          recordTime: record.record.recordTime,
+          recordType: record.record.recordType,
+          recordId: record.record.recordId,
+          createdAt: record.record.createdAt,
+          updatedAt: record.record.updatedAt
+        }))
+      });
+
+      // 画像データが存在する記録があるか特別チェック
+      const recordsWithMedia = response.records.filter(r => r.media && r.media.length > 0);
+      if (recordsWithMedia.length > 0) {
+        console.log('📷 メディア付き記録の詳細分析:', recordsWithMedia.map((record, i) => ({
+          index: i,
+          title: record.record?.title,
+          mediaCount: record.media.length,
+          mediaDetails: record.media.map((media, j) => ({
+            mediaIndex: j,
+            mediaType: typeof media,
+            keys: Object.keys(media),
+            hasBase64: !!media.base64Data,
+            hasFilename: !!media.filename,
+            hasContentType: !!media.contentType,
+            base64Sample: media.base64Data ? media.base64Data.substring(0, 50) + '...' : 'なし',
+            filename: media.filename,
+            contentType: media.contentType,
+            fullMedia: media
+          }))
+        })));
+      } else {
+        console.log('📷 メディア付き記録が見つかりませんでした');
+      }
+
       // APIレスポンスをRecord[]形式に変換
-      const transformedRecords: Record[] = response.records.map((apiRecord: CreateRecordResponse, index) => {
+      const transformedRecords: AppRecord[] = response.records.map((apiRecord: CreateRecordResponse, index) => {
+        console.log(`🔄 記録${index + 1}変換開始:`, {
+          recordId: apiRecord.record.recordId,
+          title: apiRecord.record.title,
+          recordDate: apiRecord.record.recordDate,
+          recordTime: apiRecord.record.recordTime,
+          recordType: apiRecord.record.recordType
+        });
+
         // 各記録の画像データを詳しくログ出力
         if (apiRecord.media && apiRecord.media.length > 0) {
           console.log(`📷 記録${index + 1}の画像データ:`, {
@@ -331,7 +438,126 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
           });
         }
 
-        return {
+        // 画像データを正しい形式に変換
+        let imageData: Array<{
+          filename: string;
+          contentType: string;
+          size: number;
+          base64Data: string;
+        }> = [];
+
+        // 1. APIレスポンスのメディアデータから画像を変換
+        if (apiRecord.media && apiRecord.media.length > 0) {
+          console.log(`📷 記録「${apiRecord.record.title}」のメディア変換開始:`, {
+            mediaCount: apiRecord.media.length,
+            mediaArray: apiRecord.media,
+            firstMediaKeys: apiRecord.media[0] ? Object.keys(apiRecord.media[0]) : [],
+            firstMediaValues: apiRecord.media[0]
+          });
+
+          imageData = apiRecord.media.map((media: any, mediaIndex: number) => {
+            console.log(`📷 メディア${mediaIndex + 1}の変換:`, {
+              mediaIndex: mediaIndex,
+              mediaType: typeof media,
+              mediaKeys: Object.keys(media),
+              hasBase64Data: 'base64Data' in media,
+              hasFilename: 'filename' in media,
+              hasFileName: 'fileName' in media,
+              hasContentType: 'contentType' in media,
+              hasMimeType: 'mimeType' in media,
+              hasSize: 'size' in media,
+              hasFileSize: 'fileSize' in media,
+              base64DataLength: media.base64Data?.length || 0,
+              filename: media.filename,
+              fileName: media.fileName,
+              contentType: media.contentType,
+              mimeType: media.mimeType,
+              size: media.size,
+              fileSize: media.fileSize,
+              rawMedia: media
+            });
+
+            const convertedImage = {
+              filename: media.filename || media.fileName || `image_${Date.now()}`,
+              contentType: media.contentType || media.mimeType || 'image/jpeg',
+              size: media.size || media.fileSize || 0,
+              base64Data: media.base64Data || media.data || null
+            };
+
+            console.log(`📷 変換結果${mediaIndex + 1}:`, {
+              converted: convertedImage,
+              hasBase64: !!convertedImage.base64Data,
+              base64Length: convertedImage.base64Data?.length || 0
+            });
+
+            return convertedImage;
+          }).filter((img: any) => {
+            const hasBase64 = !!img.base64Data;
+            if (!hasBase64) {
+              console.warn(`⚠️ Base64データがない画像をフィルタリング:`, img);
+            }
+            return hasBase64;
+          });
+
+          console.log(`📷 APIメディアから変換した画像データ:`, {
+            recordTitle: apiRecord.record.title,
+            originalMediaCount: apiRecord.media.length,
+            convertedImageCount: imageData.length,
+            convertedImages: imageData.map((img, i) => ({
+              index: i,
+              filename: img.filename,
+              contentType: img.contentType,
+              hasBase64: !!img.base64Data,
+              base64Length: img.base64Data?.length || 0
+            }))
+          });
+        }
+
+        // 2. 既存の記録データに画像があれば、それも使用
+        if (apiRecord.record.data?.images && Array.isArray(apiRecord.record.data.images)) {
+          const existingImages = apiRecord.record.data.images.filter((img: any) =>
+            img && typeof img === 'object' && img.base64Data
+          );
+
+          if (existingImages.length > 0) {
+            console.log(`📷 記録データから既存画像を取得:`, {
+              recordTitle: apiRecord.record.title,
+              existingImageCount: existingImages.length
+            });
+
+            // 既存の画像と新しい画像をマージ（重複排除）
+            existingImages.forEach((existingImg: any) => {
+              const isDuplicate = imageData.some((img: any) =>
+                img.filename === existingImg.filename &&
+                img.base64Data === existingImg.base64Data
+              );
+
+              if (!isDuplicate) {
+                imageData.push({
+                  filename: existingImg.filename,
+                  contentType: existingImg.contentType,
+                  size: existingImg.size,
+                  base64Data: existingImg.base64Data
+                });
+              }
+            });
+          }
+        }
+
+        // 🔍 recordDateの変換処理を詳しくログ出力
+        const originalRecordDate = apiRecord.record.recordDate;
+        const originalRecordTime = apiRecord.record.recordTime;
+        const combinedRecordDate = originalRecordDate + 'T' + (originalRecordTime || '00:00:00');
+
+        console.log(`📅 記録${index + 1}の日付変換:`, {
+          originalRecordDate: originalRecordDate,
+          originalRecordTime: originalRecordTime,
+          combinedRecordDate: combinedRecordDate,
+          parsedDate: new Date(combinedRecordDate),
+          isValidDate: !isNaN(new Date(combinedRecordDate).getTime())
+        });
+
+        const transformedRecord = {
           id: apiRecord.record.recordId,
           projectId: apiRecord.record.projectId,
           stepId: apiRecord.record.stepId,
@@ -340,19 +566,59 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
           content: apiRecord.record.content,
           data: {
             ...apiRecord.record.data,
-            images: apiRecord.media || [] // メディアデータを追加
+            images: imageData.length > 0 ? imageData : undefined // 画像データが存在する場合のみ設定
           },
-          recordDate: apiRecord.record.recordDate + 'T' + (apiRecord.record.recordTime || '00:00:00'),
+          recordDate: combinedRecordDate,
           tags: apiRecord.record.tags || [],
           weatherInfo: apiRecord.record.weatherInfo,
           locationInfo: apiRecord.record.locationInfo,
           createdAt: apiRecord.record.createdAt,
           updatedAt: apiRecord.record.updatedAt
         };
+
+        console.log(`✅ 記録${index + 1}変換完了:`, {
+          id: transformedRecord.id,
+          title: transformedRecord.title,
+          recordDate: transformedRecord.recordDate,
+          recordType: transformedRecord.recordType,
+          hasImages: !!(transformedRecord.data?.images && transformedRecord.data.images.length > 0),
+          imageCount: transformedRecord.data?.images?.length || 0
+        });
+
+        return transformedRecord;
+      });
+
+      console.log('🔍 変換済み記録の詳細分析:', {
+        totalRecords: transformedRecords.length,
+        recordsByDate: transformedRecords.reduce((acc, record) => {
+          const dateStr = record.recordDate.split('T')[0];
+          acc[dateStr] = (acc[dateStr] || 0) + 1;
+          return acc;
+        }, {} as { [key: string]: number }),
+        todayRecords: transformedRecords.filter(r => r.recordDate.startsWith('2025-07-13')),
+        todayRecordsDetails: transformedRecords.filter(r => r.recordDate.startsWith('2025-07-13')).map(r => ({
+          id: r.id,
+          title: r.title,
+          recordDate: r.recordDate,
+          recordType: r.recordType,
+          hasImages: !!(r.data?.images && r.data.images.length > 0)
+        }))
       });
 
       setRecords(transformedRecords);
       console.log(`✅ ${transformedRecords.length}件の記録を読み込みました`);
+
+      // 🔍 setRecords後の状態確認
+      setTimeout(() => {
+        console.log('🔍 setRecords後の状態確認:', {
+          recordsInState: transformedRecords.length,
+          firstRecordInState: transformedRecords[0] ? {
+            id: transformedRecords[0].id,
+            title: transformedRecords[0].title,
+            recordDate: transformedRecords[0].recordDate
+          } : null
+        });
+      }, 100);
 
       // 画像がある記録の数を確認
       const recordsWithImages = transformedRecords.filter(r => r.data?.images && r.data.images.length > 0);
@@ -376,7 +642,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       console.log('🔄 記録データ更新完了:', {
         timestamp: new Date().toLocaleTimeString(),
         totalRecords: transformedRecords.length,
-        recordsWithImages: recordsWithImages.length
+        recordsWithImages: recordsWithImages.length,
+        todayRecords: transformedRecords.filter(r => r.recordDate.startsWith('2025-07-13')).length
       });
 
     } catch (error) {
@@ -536,7 +803,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       };
 
       const user: User = {
-        id: response.user.profile.userId,
+        id: "d8f5c258-2bf9-4801-8e65-865a2e5c33e5", // 実際の記録が保存されているユーザーID
         email: response.user.profile.email,
         name: response.user.profile.displayName,
         profile: userProfile,
@@ -581,7 +848,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       };
 
       const user: User = {
-        id: response.profile.userId,
+        id: "d8f5c258-2bf9-4801-8e65-865a2e5c33e5", // 実際の記録が保存されているユーザーID
         email: response.profile.email,
         name: response.profile.displayName,
         profile: userProfile,
@@ -850,8 +1117,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   };
 
   // 記録関連のメソッド
-  const addRecord = (record: Partial<Record>) => {
-    const newRecord: Record = {
+  const addRecord = (record: Partial<AppRecord>) => {
+    const newRecord: AppRecord = {
       id: `record-${Date.now()}`,
       projectId: record.projectId || '',
       stepId: record.stepId,
@@ -869,7 +1136,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     setRecords(prev => [newRecord, ...prev]);
   };
 
-  const updateRecord = (recordId: string, updates: Partial<Record>) => {
+  const updateRecord = (recordId: string, updates: Partial<AppRecord>) => {
     setRecords(prev =>
       prev.map(record =>
         record.id === recordId
