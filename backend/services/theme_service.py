@@ -1,6 +1,4 @@
 from models.theme import UserProfile, ResearchTheme, ThemeListResponse, SaveThemeRequest, SaveThemeResponse, GeneratePlanRequest, GeneratePlanResponse, ResearchPlan, ResearchStep, GetSavedThemeResponse, GetResearchPlanResponse
-import json
-import os
 from datetime import datetime
 
 
@@ -9,8 +7,6 @@ class ThemeService:
         if repository is None:
             raise ValueError("ThemeService requires a repository instance")
         self.repository = repository
-        self.saved_themes_file = "saved_themes.json"
-        self.saved_plans_file = "saved_research_plans.json"
 
     async def generate_themes(self, profile: UserProfile) -> ThemeListResponse:
         themes_data = await self.repository.generate_themes(profile)
@@ -19,7 +15,7 @@ class ThemeService:
 
     async def save_theme(self, request: SaveThemeRequest) -> SaveThemeResponse:
         """
-        選択されたテーマを保存する
+        選択されたテーマを保存する（AWSのみ）
         """
         try:
             # DynamoDBに保存するためのデータを準備
@@ -55,29 +51,9 @@ class ThemeService:
                 #         notes=f"テーマ決定日: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
                 #     )
 
-                # JSONファイルにも保存（後方互換性のため）
-                saved_data = {
-                    "theme": request.theme.model_dump(),
-                    "user_profile": request.user_profile.model_dump() if request.user_profile else None,
-                    "saved_at": datetime.now().isoformat()
-                }
-
-                # 既存の保存データを読み込み
-                saved_themes = []
-                if os.path.exists(self.saved_themes_file):
-                    with open(self.saved_themes_file, 'r', encoding='utf-8') as f:
-                        saved_themes = json.load(f)
-
-                # 新しいテーマを追加
-                saved_themes.append(saved_data)
-
-                # ファイルに保存
-                with open(self.saved_themes_file, 'w', encoding='utf-8') as f:
-                    json.dump(saved_themes, f, ensure_ascii=False, indent=2)
-
                 return SaveThemeResponse(
                     success=True,
-                    message="テーマが正常に保存されました（AWSとローカルファイルの両方に保存）",
+                    message="テーマが正常に保存されました（AWS）",
                     saved_theme_id=saved_theme.themeId
                 )
             else:
@@ -96,10 +72,10 @@ class ThemeService:
 
     async def get_saved_theme(self, theme_id: str) -> GetSavedThemeResponse:
         """
-        保存されたテーマを取得する（AWSからまず取得、見つからなければJSONファイルから）
+        保存されたテーマを取得する（AWSのみ）
         """
         try:
-            # まずAWS DynamoDBからテーマを取得
+            # AWS DynamoDBからテーマを取得
             aws_theme = await self.repository.get_theme_by_id(theme_id)
 
             if aws_theme:
@@ -122,45 +98,13 @@ class ThemeService:
                     theme=converted_theme,
                     user_profile=None  # 現在のところ、user_profileは別途管理
                 )
-
-            # AWS DynamoDBから見つからない場合、JSONファイルから取得
-            print(f"⚠️ AWS DynamoDBにテーマが見つかりませんでした。JSONファイルから取得します: {theme_id}")
-
-            if not os.path.exists(self.saved_themes_file):
+            else:
                 return GetSavedThemeResponse(
                     success=False,
-                    message="保存されたテーマが見つかりません",
+                    message="指定されたテーマが見つかりません",
                     theme=None,
                     user_profile=None
                 )
-
-            with open(self.saved_themes_file, 'r', encoding='utf-8') as f:
-                saved_themes = json.load(f)
-
-            # 指定されたテーマIDを検索（theme.idで検索）
-            for saved_data in saved_themes:
-                theme_data = saved_data["theme"]
-                if theme_data.get("id") == theme_id:
-                    theme = ResearchTheme(**theme_data)
-
-                    user_profile = None
-                    if saved_data.get("user_profile"):
-                        user_profile = UserProfile(**saved_data["user_profile"])
-
-                    print(f"✅ テーマをJSONファイルから取得しました: {theme.title}")
-                    return GetSavedThemeResponse(
-                        success=True,
-                        message="テーマが正常に取得されました（JSONファイル）",
-                        theme=theme,
-                        user_profile=user_profile
-                    )
-
-            return GetSavedThemeResponse(
-                success=False,
-                message="指定されたテーマが見つかりません",
-                theme=None,
-                user_profile=None
-            )
 
         except Exception as e:
             print(f"❌ テーマの取得でエラーが発生しました: {str(e)}")
@@ -173,23 +117,38 @@ class ThemeService:
 
     async def get_saved_research_plan(self, theme_id: str) -> GetResearchPlanResponse:
         """
-        保存された研究計画を取得する（AWSからまず取得、見つからなければJSONファイルから）
+        保存された研究計画を取得する（AWSのみ）
         """
         try:
-            # まずAWS DynamoDBから研究計画を取得
+            # AWS DynamoDBから研究計画を取得
             aws_plan = await self.repository.get_plan_by_theme_id(theme_id)
 
             if aws_plan:
                 # ResearchStepオブジェクトのリストを作成
+                # project.py の ResearchStep から theme.py の ResearchStep に変換
                 steps = []
                 for step_data in aws_plan.steps:
                     if isinstance(step_data, dict):
-                        step = ResearchStep(**step_data)
+                        # 辞書の場合はtheme.pyのResearchStepに変換
+                        theme_step = ResearchStep(
+                            title=step_data.get('title', ''),
+                            description=step_data.get('description', ''),
+                            tips=step_data.get('tips', []),
+                            duration=step_data.get('estimatedDuration', step_data.get('duration', '1日')),
+                            order=step_data.get('order', 1)
+                        )
                     else:
-                        step = step_data  # 既にResearchStepオブジェクトの場合
-                    steps.append(step)
+                        # project.py の ResearchStep オブジェクトの場合
+                        theme_step = ResearchStep(
+                            title=step_data.title,
+                            description=step_data.description,
+                            tips=step_data.tips,
+                            duration=step_data.estimatedDuration,
+                            order=step_data.order
+                        )
+                    steps.append(theme_step)
 
-                # ResearchPlanオブジェクトを作成
+                # models/theme.py の ResearchPlan オブジェクトを作成
                 plan = ResearchPlan(
                     theme_id=aws_plan.themeId,
                     theme_title=aws_plan.title,
@@ -206,56 +165,13 @@ class ThemeService:
                     plan=plan,
                     is_cached=True
                 )
-
-            # AWS DynamoDBから見つからない場合、JSONファイルから取得
-            print(f"⚠️ AWS DynamoDBに研究計画が見つかりませんでした。JSONファイルから取得します: {theme_id}")
-
-            if not os.path.exists(self.saved_plans_file):
+            else:
                 return GetResearchPlanResponse(
                     success=False,
-                    message="保存された研究計画が見つかりません",
+                    message="指定されたテーマの研究計画が見つかりません",
                     plan=None,
                     is_cached=False
                 )
-
-            with open(self.saved_plans_file, 'r', encoding='utf-8') as f:
-                saved_plans = json.load(f)
-
-            # 指定されたテーマIDを検索（plan.theme_idで検索）
-            for saved_data in saved_plans:
-                plan_data = saved_data["plan"]
-                if plan_data.get("theme_id") == theme_id:
-
-                    # ResearchStepオブジェクトのリストを作成
-                    steps = []
-                    for step_data in plan_data.get("steps", []):
-                        step = ResearchStep(**step_data)
-                        steps.append(step)
-
-                    # ResearchPlanオブジェクトを作成
-                    plan = ResearchPlan(
-                        theme_id=plan_data["theme_id"],
-                        theme_title=plan_data["theme_title"],
-                        steps=steps,
-                        total_estimated_days=plan_data["total_estimated_days"],
-                        difficulty=plan_data["difficulty"],
-                        genre=plan_data["genre"]
-                    )
-
-                    print(f"✅ 研究計画をJSONファイルから取得しました: {plan.theme_title}")
-                    return GetResearchPlanResponse(
-                        success=True,
-                        message="研究計画が正常に取得されました（JSONファイル）",
-                        plan=plan,
-                        is_cached=True
-                    )
-
-            return GetResearchPlanResponse(
-                success=False,
-                message="指定されたテーマの研究計画が見つかりません",
-                plan=None,
-                is_cached=False
-            )
 
         except Exception as e:
             print(f"❌ 研究計画の取得でエラーが発生しました: {str(e)}")
@@ -268,7 +184,7 @@ class ThemeService:
 
     async def save_research_plan(self, plan: ResearchPlan) -> bool:
         """
-        研究計画を保存する（AWSとJSONファイルの両方）
+        研究計画を保存する（AWSのみ）
         """
         try:
             # AWSに保存する用のデータを準備
@@ -295,41 +211,10 @@ class ThemeService:
 
             if saved_plan:
                 print(f"✅ 研究計画をAWSに保存しました: {plan.theme_title}")
-                aws_save_success = True
+                return True
             else:
                 print(f"❌ 研究計画のAWS保存に失敗しました: {plan.theme_title}")
-                aws_save_success = False
-
-            # JSONファイルにもバックアップ保存
-            try:
-                saved_data = {
-                    "plan": plan.model_dump(),
-                    "created_at": datetime.now().isoformat(),
-                    "aws_saved": aws_save_success
-                }
-
-                # 既存の保存データを読み込み
-                saved_plans = []
-                if os.path.exists(self.saved_plans_file):
-                    with open(self.saved_plans_file, 'r', encoding='utf-8') as f:
-                        saved_plans = json.load(f)
-
-                # 既存の同じテーマの計画があれば削除
-                saved_plans = [p for p in saved_plans if p.get("plan", {}).get("theme_id") != plan.theme_id]
-
-                # 新しい計画を追加
-                saved_plans.append(saved_data)
-
-                # ファイルに保存
-                with open(self.saved_plans_file, 'w', encoding='utf-8') as f:
-                    json.dump(saved_plans, f, ensure_ascii=False, indent=2)
-
-                print(f"✅ 研究計画をJSONファイルにバックアップしました: {plan.theme_title}")
-            except Exception as json_error:
-                print(f"⚠️ JSONファイルへのバックアップに失敗しました: {json_error}")
-
-            # AWS保存が成功すれば全体として成功
-            return aws_save_success
+                return False
 
         except Exception as e:
             print(f"❌ 研究計画の保存でエラーが発生しました: {str(e)}")

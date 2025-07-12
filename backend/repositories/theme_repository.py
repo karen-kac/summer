@@ -217,13 +217,14 @@ class ThemeRepository:
             # テーマIDで研究計画を検索（スキャン操作）
             # 実際の実装では、GSIやスキャンフィルターを使用
             result = await self.db.scan_items(
-                filter_expression="themeId = :theme_id",
-                expression_attribute_values={":theme_id": theme_id}
+                filter_expression="themeId = :theme_id AND #type = :type",
+                expression_attribute_values={":theme_id": theme_id, ":type": "ResearchPlan"},
+                expression_attribute_names={"#type": "Type"}
             )
 
             if result and isinstance(result, dict) and 'items' in result:
                 for item in result['items']:
-                    if isinstance(item, dict) and item.get("Type") == "RESEARCH_PLAN":
+                    if isinstance(item, dict) and item.get("Type") == "ResearchPlan":
                         return ResearchPlan(**item)
 
             return None
