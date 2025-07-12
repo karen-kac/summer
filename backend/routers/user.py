@@ -154,8 +154,8 @@ async def get_user_profile(
 
 # ダッシュボードデータのレスポンス型
 class DashboardDataResponse(BaseModel):
-    active_projects: List[ResearchProject]
-    past_projects: List[ResearchProject]
+    active_projects: List[Dict[str, Any]]
+    past_projects: List[Dict[str, Any]]
     user_stats: Dict[str, Any]
 
 @router.get("/dashboard/{user_id}")
@@ -185,7 +185,27 @@ async def get_dashboard_data(
             )
 
         # アクティブなプロジェクトを取得
-        active_projects = await project_repo.get_active_projects_by_user(user_id)
+        active_projects_raw = await project_repo.get_active_projects_by_user(user_id)
+
+        # フロントエンド用にフィールド名を変換
+        active_projects = []
+        for project in active_projects_raw:
+            project_dict = project.model_dump()
+            # PKからプロジェクトIDを抽出して id フィールドに設定
+            pk = project_dict.get('PK', '')
+            if pk.startswith('PROJECT#'):
+                project_id = pk[8:]  # 'PROJECT#' を除去
+                project_dict['id'] = project_id
+            else:
+                # フォールバック: projectId フィールドがある場合
+                project_dict['id'] = project_dict.get('projectId', project_dict.get('PK', ''))
+
+            # 不要なDynamoDBフィールドを除去
+            for key in ['PK', 'SK', 'Type', 'GSI1PK', 'GSI1SK', 'GSI2PK', 'GSI2SK']:
+                project_dict.pop(key, None)
+            project_dict.pop('projectId', None)  # 古いprojectIdフィールドも削除
+
+            active_projects.append(project_dict)
 
         # 完了したプロジェクトを取得
         completed_projects_response = await project_repo.get_projects_by_user(
@@ -193,7 +213,27 @@ async def get_dashboard_data(
             status="completed",
             limit=10
         )
-        past_projects = [p.project for p in completed_projects_response.projects]
+        past_projects_raw = [p.project for p in completed_projects_response.projects]
+
+        # フロントエンド用にフィールド名を変換
+        past_projects = []
+        for project in past_projects_raw:
+            project_dict = project.model_dump()
+            # PKからプロジェクトIDを抽出して id フィールドに設定
+            pk = project_dict.get('PK', '')
+            if pk.startswith('PROJECT#'):
+                project_id = pk[8:]  # 'PROJECT#' を除去
+                project_dict['id'] = project_id
+            else:
+                # フォールバック: projectId フィールドがある場合
+                project_dict['id'] = project_dict.get('projectId', project_dict.get('PK', ''))
+
+            # 不要なDynamoDBフィールドを除去
+            for key in ['PK', 'SK', 'Type', 'GSI1PK', 'GSI1SK', 'GSI2PK', 'GSI2SK']:
+                project_dict.pop(key, None)
+            project_dict.pop('projectId', None)  # 古いprojectIdフィールドも削除
+
+            past_projects.append(project_dict)
 
         # ユーザー統計を構築
         user_stats = {
@@ -300,9 +340,26 @@ async def create_project_from_theme(
             )
 
         logger.info(f"プロジェクト作成成功: {user_id}")
+
+        # フロントエンド用にフィールド名を変換
+        project_dict = project_response.project.model_dump()
+        # PKからプロジェクトIDを抽出して id フィールドに設定
+        pk = project_dict.get('PK', '')
+        if pk.startswith('PROJECT#'):
+            project_id = pk[8:]  # 'PROJECT#' を除去
+            project_dict['id'] = project_id
+        else:
+            # フォールバック: projectId フィールドがある場合
+            project_dict['id'] = project_dict.get('projectId', project_dict.get('PK', ''))
+
+        # 不要なDynamoDBフィールドを除去
+        for key in ['PK', 'SK', 'Type', 'GSI1PK', 'GSI1SK', 'GSI2PK', 'GSI2SK']:
+            project_dict.pop(key, None)
+        project_dict.pop('projectId', None)  # 古いprojectIdフィールドも削除
+
         return {
             "success": True,
-            "project": project_response.project.model_dump(),
+            "project": project_dict,
             "message": "プロジェクトが正常に作成されました",
             "previous_projects_saved": len(active_projects) if active_projects else 0
         }
