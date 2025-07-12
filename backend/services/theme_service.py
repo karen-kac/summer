@@ -10,6 +10,26 @@ class ThemeService:
 
     async def generate_themes(self, profile: UserProfile) -> ThemeListResponse:
         themes_data = await self.repository.generate_themes(profile)
+
+        # genre値を検証・修正
+        valid_genres = ['experiment', 'observation', 'research']
+
+        for theme_data in themes_data:
+            if 'genre' in theme_data and theme_data['genre'] not in valid_genres:
+                # 不正なgenre値の場合はデフォルト値にマッピング
+                genre_mapping = {
+                    'project': 'experiment',
+                    'survey': 'research',
+                    'study': 'research',
+                    'investigation': 'research',
+                    'test': 'experiment',
+                    'watch': 'observation',
+                    'monitor': 'observation'
+                }
+                original_genre = theme_data['genre']
+                theme_data['genre'] = genre_mapping.get(original_genre, 'experiment')
+                print(f"⚠️  不正なgenre値を修正: {original_genre} -> {theme_data['genre']}")
+
         themes = [ResearchTheme(**data) for data in themes_data]
         return ThemeListResponse(themes=themes)
 
@@ -18,8 +38,12 @@ class ThemeService:
         選択されたテーマを保存する（AWSのみ）
         """
         try:
+            print(f"🎯 テーマ保存開始: {request.theme.title}")
+            print(f"📊 テーマ詳細: ID={request.theme.id}, ジャンル={request.theme.genre}")
+
             # DynamoDBに保存するためのデータを準備
             theme_data = {
+                "theme_id": request.theme.id,  # フロントエンドのテーマIDを使用
                 "title": request.theme.title,
                 "description": request.theme.description,
                 "genre": request.theme.genre,
@@ -30,13 +54,17 @@ class ThemeService:
                 "targetGrades": ["elementary4"],  # デフォルト値
                 "keywords": [],  # デフォルト値
                 "isPublic": True,
-                "createdBy": request.user_profile.email if request.user_profile else None
+                "createdBy": None  # UserProfileにemailが存在しないためNoneに設定
             }
+
+            print(f"💾 AWS保存データ準備完了: {theme_data}")
 
             # ThemeRepositoryを使ってDynamoDBに保存
             saved_theme = await self.repository.save_theme(theme_data)
 
             if saved_theme:
+                print(f"✅ テーマ保存成功: ID={saved_theme.themeId}")
+
                 # TODO: ユーザーとテーマの関連付けも保存
                 # 現在のユーザー認証システムが完成したら、ユーザーIDを取得してテーマを保存
                 # if user_id:
@@ -57,6 +85,7 @@ class ThemeService:
                     saved_theme_id=saved_theme.themeId
                 )
             else:
+                print("❌ AWS保存失敗: saved_theme が None")
                 return SaveThemeResponse(
                     success=False,
                     message="AWSへのテーマ保存に失敗しました",
@@ -64,6 +93,7 @@ class ThemeService:
                 )
 
         except Exception as e:
+            print(f"❌ テーマ保存でエラーが発生: {str(e)}")
             return SaveThemeResponse(
                 success=False,
                 message=f"テーマの保存に失敗しました: {str(e)}",
@@ -75,10 +105,12 @@ class ThemeService:
         保存されたテーマを取得する（AWSのみ）
         """
         try:
+            print(f"🔍 テーマ取得開始: ID={theme_id}")
             # AWS DynamoDBからテーマを取得
             aws_theme = await self.repository.get_theme_by_id(theme_id)
 
             if aws_theme:
+                print(f"✅ テーマ取得成功: ID={aws_theme.themeId}, タイトル={aws_theme.title}")
                 # models/project.py の ResearchTheme から models/theme.py の ResearchTheme に変換
                 converted_theme = ResearchTheme(
                     id=aws_theme.themeId,
@@ -99,6 +131,7 @@ class ThemeService:
                     user_profile=None  # 現在のところ、user_profileは別途管理
                 )
             else:
+                print(f"❌ テーマ取得失敗: ID={theme_id} が見つかりません")
                 return GetSavedThemeResponse(
                     success=False,
                     message="指定されたテーマが見つかりません",
@@ -223,28 +256,35 @@ class ThemeService:
     async def generate_research_plan(self, request: GeneratePlanRequest) -> GeneratePlanResponse:
         """
         保存されたテーマを基に研究計画を生成する（初回のみ）
+        既存の研究計画がある場合はそれを返し、ない場合は新しく生成・保存する
         """
         try:
             # まず既存の研究計画があるかチェック
             existing_plan_response = await self.get_saved_research_plan(request.theme_id)
-            if existing_plan_response.success:
+            if existing_plan_response.success and existing_plan_response.plan:
+                print(f"✅ 既存の研究計画を取得しました: {existing_plan_response.plan.theme_title}")
                 return GeneratePlanResponse(
                     success=True,
-                    message="保存された研究計画が見つかりました",
+                    message="保存された研究計画を取得しました",
                     plan=existing_plan_response.plan
                 )
 
+            print(f"🔄 新しい研究計画を生成します: テーマID {request.theme_id}")
+
             # 保存されたテーマを取得
             saved_theme_response = await self.get_saved_theme(request.theme_id)
-            if not saved_theme_response.success:
+            if not saved_theme_response.success or not saved_theme_response.theme:
+                print(f"❌ テーマの取得に失敗しました: {saved_theme_response.message}")
                 return GeneratePlanResponse(
                     success=False,
-                    message=saved_theme_response.message,
+                    message=f"テーマの取得に失敗しました: {saved_theme_response.message}",
                     plan=None
                 )
 
             theme = saved_theme_response.theme
             user_profile = saved_theme_response.user_profile
+
+            print(f"🤖 AIによる研究計画を生成中: {theme.title}")
 
             # AI を使って研究計画を生成
             plan_data = await self.repository.generate_research_plan(theme, user_profile)
@@ -263,13 +303,15 @@ class ThemeService:
                 if not isinstance(step_data, dict):
                     continue
 
+                # order フィールドが不足している場合は設定
                 if 'order' not in step_data:
                     step_data['order'] = i + 1
 
                 try:
                     step = ResearchStep(**step_data)
                     steps.append(step)
-                except Exception:
+                except Exception as e:
+                    print(f"⚠️ ステップの作成中にエラー: {e}")
                     continue
 
             if not steps:
@@ -286,15 +328,24 @@ class ThemeService:
             )
 
             # 研究計画を保存
-            await self.save_research_plan(plan)
-
-            return GeneratePlanResponse(
-                success=True,
-                message="研究計画が正常に生成されました",
-                plan=plan
-            )
+            save_success = await self.save_research_plan(plan)
+            if save_success:
+                print(f"✅ 研究計画を生成・保存しました: {plan.theme_title}")
+                return GeneratePlanResponse(
+                    success=True,
+                    message="新しい研究計画を生成・保存しました",
+                    plan=plan
+                )
+            else:
+                print(f"⚠️ 研究計画の保存に失敗しましたが、生成は成功しました")
+                return GeneratePlanResponse(
+                    success=True,
+                    message="研究計画を生成しました（保存に失敗）",
+                    plan=plan
+                )
 
         except Exception as e:
+            print(f"❌ 研究計画の生成でエラーが発生しました: {str(e)}")
             return GeneratePlanResponse(
                 success=False,
                 message=f"研究計画の生成に失敗しました: {str(e)}",

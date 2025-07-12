@@ -47,11 +47,15 @@ class ThemeRepository:
             return None
 
         try:
-            theme_id = KeyBuilder.generate_uuid()
+                                    # theme_dataにtheme_idが含まれている場合はそれを使用、なければ新規生成
+            theme_id = theme_data.get('theme_id') or KeyBuilder.generate_uuid()
+
+            # theme_idをtheme_dataから除去（ResearchTheme.createの引数として直接渡すため）
+            filtered_theme_data = {k: v for k, v in theme_data.items() if k != 'theme_id'}
 
             theme = ResearchTheme.create(
                 theme_id=theme_id,
-                **theme_data
+                **filtered_theme_data
             )
 
             success = await self.db.put_item(theme.to_dynamo_item())

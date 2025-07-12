@@ -52,7 +52,9 @@ class ProjectRepository:
                 status="planning",
                 genre=request.genre,
                 difficulty=request.difficulty,
-                estimatedDays=final_estimated_days
+                estimatedDays=final_estimated_days,
+                currentStepIndex=0,
+                progressPercentage=0.0
             )
 
             # プロジェクト設定を作成

@@ -232,6 +232,12 @@ class CreateProjectFromThemeRequest(BaseModel):
     steps: List[str]
     target_end_date: str  # ISO date string
 
+# プロジェクト進捗更新用のリクエスト型
+class UpdateProjectProgressRequest(BaseModel):
+    current_step_index: int
+    progress_percentage: float
+    status: str = "in_progress"
+
 @router.post("/projects")
 async def create_project_from_theme(
     user_id: str,
@@ -250,6 +256,26 @@ async def create_project_from_theme(
         Dict[str, Any]: 作成されたプロジェクト情報
     """
     try:
+        # 既存のアクティブなプロジェクトを取得
+        active_projects = await project_repo.get_active_projects_by_user(user_id)
+
+        # 既存のアクティブなプロジェクトがある場合は、それらを過去の研究として保存
+        if active_projects:
+            from models.project import UpdateProjectRequest
+
+            for active_project in active_projects:
+                # アクティブなプロジェクトを完了状態に変更
+                update_request = UpdateProjectRequest(
+                    status="completed",
+                    progressPercentage=100.0 if active_project.progressPercentage >= 90 else active_project.progressPercentage
+                )
+
+                success = await project_repo.update_project(active_project.projectId, update_request)
+                if success:
+                    logger.info(f"既存のアクティブなプロジェクトを過去の研究として保存: {active_project.projectId}")
+                else:
+                    logger.warning(f"既存のアクティブなプロジェクトの状態更新に失敗: {active_project.projectId}")
+
         # フロントエンドからのリクエストをバックエンドの形式に変換
         project_request = CreateProjectRequest(
             themeId=request.theme_id,
@@ -277,7 +303,8 @@ async def create_project_from_theme(
         return {
             "success": True,
             "project": project_response.project.model_dump(),
-            "message": "プロジェクトが正常に作成されました"
+            "message": "プロジェクトが正常に作成されました",
+            "previous_projects_saved": len(active_projects) if active_projects else 0
         }
 
     except HTTPException:
@@ -287,4 +314,57 @@ async def create_project_from_theme(
         raise HTTPException(
             status_code=500,
             detail=f"プロジェクト作成中にエラーが発生しました: {str(e)}"
+        )
+
+@router.put("/projects/{project_id}/progress")
+async def update_project_progress(
+    project_id: str,
+    request: UpdateProjectProgressRequest,
+    project_repo: ProjectRepository = Depends(get_project_repository)
+) -> Dict[str, Any]:
+    """
+    プロジェクトの進捗を更新
+
+    Args:
+        project_id: プロジェクトID
+        request: 進捗更新リクエスト
+        project_repo: プロジェクトリポジトリ
+
+    Returns:
+        Dict[str, Any]: 更新結果
+    """
+    try:
+        # バックエンドの UpdateProjectRequest 形式に変換
+        from models.project import UpdateProjectRequest
+
+        update_request = UpdateProjectRequest(
+            currentStepIndex=request.current_step_index,
+            progressPercentage=request.progress_percentage,
+            status=request.status
+        )
+
+        # プロジェクトを更新
+        success = await project_repo.update_project(project_id, update_request)
+
+        if not success:
+            raise HTTPException(
+                status_code=500,
+                detail="プロジェクト進捗更新に失敗しました"
+            )
+
+        logger.info(f"プロジェクト進捗更新成功: {project_id} - ステップ{request.current_step_index} ({request.progress_percentage}%)")
+        return {
+            "success": True,
+            "message": "プロジェクト進捗が正常に更新されました",
+            "current_step_index": request.current_step_index,
+            "progress_percentage": request.progress_percentage
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"プロジェクト進捗更新エラー: {project_id}, {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"プロジェクト進捗更新中にエラーが発生しました: {str(e)}"
         )
