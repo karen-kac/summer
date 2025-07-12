@@ -398,10 +398,13 @@ class DynamoDBClient:
             return False
 
     def _process_datetime_fields(self, item: Dict[str, Any]) -> Dict[str, Any]:
-        """datetime型をISO文字列に変換、float型をDecimal型に変換"""
+        """datetime型とdate型をISO文字列に変換、float型をDecimal型に変換"""
+        from datetime import date
         processed_item = {}
         for key, value in item.items():
             if isinstance(value, datetime):
+                processed_item[key] = value.isoformat()
+            elif isinstance(value, date):
                 processed_item[key] = value.isoformat()
             elif isinstance(value, float):
                 processed_item[key] = Decimal(str(value))
@@ -410,7 +413,7 @@ class DynamoDBClient:
             elif isinstance(value, list):
                 processed_item[key] = [
                     self._process_datetime_fields(v) if isinstance(v, dict)
-                    else v.isoformat() if isinstance(v, datetime)
+                    else v.isoformat() if isinstance(v, (datetime, date))
                     else Decimal(str(v)) if isinstance(v, float)
                     else v for v in value
                 ]

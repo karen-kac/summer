@@ -329,6 +329,9 @@ class CreateProjectRequest(BaseModel):
     targetEndDate: date
     customGoals: List[str] = []
     planId: Optional[str] = None
+    genre: Genre = Genre.experiment  # デフォルト値を設定
+    difficulty: Literal["easy", "medium", "hard"] = "medium"  # デフォルト値を設定
+    estimatedDays: Optional[int] = None  # targetEndDateから自動計算される場合はOptional
 
 
 class UpdateProjectRequest(BaseModel):

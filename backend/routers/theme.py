@@ -1,15 +1,12 @@
 from fastapi import APIRouter, HTTPException
 from models.theme import UserProfile, ResearchTheme, ThemeListResponse, SaveThemeRequest, SaveThemeResponse, GeneratePlanRequest, GeneratePlanResponse, GetSavedThemeResponse, GetResearchPlanResponse
 from services.theme_service import ThemeService
-from repositories import ThemeRepository, BedrockClient
-from utils import PromptBuilder
+from repositories import get_theme_repository
 
 router = APIRouter()
 
-# 実際のBedrock APIを使用するサービス
-prompt_builder = PromptBuilder()
-bedrock_client = BedrockClient()
-theme_repository = ThemeRepository(prompt_builder, bedrock_client)
+# ファクトリーパターンを使用してサービスを取得
+theme_repository = get_theme_repository()
 theme_service = ThemeService(theme_repository)
 
 
