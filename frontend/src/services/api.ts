@@ -32,6 +32,37 @@ export interface LoginResponse {
   user: SignupResponse;
 }
 
+export interface DashboardDataResponse {
+  active_projects: any[];
+  past_projects: any[];
+  user_stats: {
+    totalPoints: number;
+    level: number;
+    completedProjects: number;
+    currentStreak: number;
+    totalRecords: number;
+    totalPhotos: number;
+    totalExperiments: number;
+  };
+}
+
+export interface CreateProjectRequest {
+  theme_id: string;
+  title: string;
+  description: string;
+  genre: string;
+  estimated_days: number;
+  materials: string[];
+  steps: string[];
+  target_end_date: string;
+}
+
+export interface CreateProjectResponse {
+  success: boolean;
+  project: any;
+  message: string;
+}
+
 // APIエラー型
 export class ApiError extends Error {
   constructor(
@@ -116,12 +147,16 @@ class ThemeApi {
   /**
    * 選択されたテーマを保存する
    */
-  async saveTheme(theme: ResearchTheme, userProfile?: UserProfile): Promise<SaveThemeResponse> {
+  async saveTheme(theme: ResearchTheme, userProfile?: UserProfile, userId?: string): Promise<SaveThemeResponse> {
     const request: SaveThemeRequest = {
       theme,
       user_profile: userProfile
     };
-    return this.client.post<SaveThemeResponse>('/theme/save', request);
+
+    // ユーザーIDがある場合はクエリパラメータとして追加
+    const endpoint = userId ? `/theme/save?user_id=${userId}` : '/theme/save';
+
+    return this.client.post<SaveThemeResponse>(endpoint, request);
   }
 
   /**
@@ -185,6 +220,20 @@ class UserApi {
    */
   async getUserProfile(userId: string): Promise<SignupResponse> {
     return this.client.get<SignupResponse>(`/user/profile/${userId}`);
+  }
+
+  /**
+   * ユーザーダッシュボードデータを取得する
+   */
+  async getDashboardData(userId: string): Promise<DashboardDataResponse> {
+    return this.client.get<DashboardDataResponse>(`/user/dashboard/${userId}`);
+  }
+
+  /**
+   * テーマからプロジェクトを作成する
+   */
+  async createProjectFromTheme(userId: string, request: CreateProjectRequest): Promise<CreateProjectResponse> {
+    return this.client.post<CreateProjectResponse>(`/user/projects?user_id=${userId}`, request);
   }
 }
 

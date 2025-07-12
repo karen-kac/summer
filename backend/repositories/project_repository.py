@@ -151,6 +151,7 @@ class ProjectRepository:
                     sk_prefix="PROJECT#",
                     filter_expression="attribute_exists(#status) AND #status = :status",
                     expression_attribute_values={':status': status},
+                    expression_attribute_names={'#status': 'status'},
                     limit=limit,
                     last_evaluated_key=last_evaluated_key
                 )
@@ -309,11 +310,12 @@ class ProjectRepository:
                 gsi_name="1",
                 pk=KeyBuilder.user_pk(user_id),
                 sk_prefix="PROJECT#",
-                filter_expression="attribute_exists(#status) AND #status IN (:planning, :in_progress)",
+                filter_expression="#status = :planning OR #status = :in_progress",
                 expression_attribute_values={
                     ':planning': 'planning',
                     ':in_progress': 'in_progress'
-                }
+                },
+                expression_attribute_names={'#status': 'status'}
             )
 
             # プロジェクトオブジェクトに変換

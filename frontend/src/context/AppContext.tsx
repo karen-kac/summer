@@ -1,14 +1,18 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { UserProfile, ResearchTheme, ResearchProject, AuthState, LoginRequest, SignupRequest, User, Grade, Interest, Personality, Strength, Duration, Record, Schedule } from '../types';
 import { themeApi, userApi, ApiError } from '../services/api';
 
 // ヘルパー関数: 研究ジャンルに応じたステップ数を返す
 const getStepCount = (genre: string): number => {
   switch (genre) {
-    case 'experiment': return 7;
-    case 'observation': return 6;
-    case 'research': return 6;
-    default: return 7;
+    case 'experiment':
+      return 7;
+    case 'observation':
+      return 6;
+    case 'research':
+      return 6;
+    default:
+      return 7;
   }
 };
 
@@ -36,6 +40,19 @@ interface AppContextType {
   savedThemes: ResearchTheme[];
   savedThemesLoading: boolean;
 
+  // ダッシュボード関連
+  dashboardLoading: boolean;
+  dashboardError: string;
+  userStats: {
+    totalPoints: number;
+    level: number;
+    completedProjects: number;
+    currentStreak: number;
+    totalRecords: number;
+    totalPhotos: number;
+    totalExperiments: number;
+  };
+
   // アクション
   handleLogin: (credentials: LoginRequest) => Promise<void>;
   handleSignup: (credentials: SignupRequest) => Promise<void>;
@@ -51,6 +68,7 @@ interface AppContextType {
   updateRecord: (recordId: string, updates: Partial<Record>) => void;
   generateThemesFromAPI: (profile: UserProfile, useAI?: boolean) => Promise<void>;
   loadSavedThemes: () => Promise<void>;
+  loadDashboardData: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -91,8 +109,21 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [todaysTasks, setTodaysTasks] = useState<Array<{ icon: string; task: string; urgent: boolean }>>([]);
 
+  // ダッシュボード状態の管理を追加
+  const [dashboardLoading, setDashboardLoading] = useState<boolean>(false);
+  const [dashboardError, setDashboardError] = useState<string>('');
+  const [userStats, setUserStats] = useState({
+    totalPoints: 0,
+    level: 1,
+    completedProjects: 0,
+    currentStreak: 0,
+    totalRecords: 0,
+    totalPhotos: 0,
+    totalExperiments: 0
+  });
+
   // 研究タイプとステップに応じたタスク生成
-  const generateTasksForProject = (project: ResearchProject, stepIndex: number) => {
+  const generateTasksForProject = useCallback((project: ResearchProject, stepIndex: number) => {
     const { genre, title } = project;
 
     const taskTemplates = {
@@ -228,7 +259,41 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       { icon: '📝', task: '今日の研究を進めよう', urgent: true },
       { icon: '📷', task: '進捗を記録しよう', urgent: false }
     ];
-  };
+  }, []);
+
+  // ダッシュボードデータを読み込む関数
+  const loadDashboardData = useCallback(async (): Promise<void> => {
+    if (!authState.user?.id) return;
+
+    setDashboardLoading(true);
+    setDashboardError('');
+
+    try {
+      const response = await userApi.getDashboardData(authState.user.id);
+
+      // プロジェクトデータを設定
+      setActiveProjects(response.active_projects || []);
+      setPastProjects(response.past_projects || []);
+      setUserStats(response.user_stats);
+
+      // 最初のアクティブプロジェクトがある場合、タスクを生成
+      if (response.active_projects?.length > 0) {
+        const currentProject = response.active_projects[0];
+        const totalSteps = getStepCount(currentProject.genre || 'experiment');
+        const currentStepIndex = Math.floor((currentProject.progressPercentage / 100) * totalSteps);
+        const stepIndex = Math.min(currentStepIndex, totalSteps - 1);
+        const tasks = generateTasksForProject(currentProject, stepIndex);
+        setTodaysTasks(tasks);
+      }
+
+      console.log('✅ ダッシュボードデータ読み込み成功');
+    } catch (error) {
+      console.error('❌ ダッシュボードデータ読み込みエラー:', error);
+      setDashboardError('ダッシュボードデータの読み込みに失敗しました。');
+    } finally {
+      setDashboardLoading(false);
+    }
+  }, [authState.user?.id, generateTasksForProject]);
 
   // アプリ起動時にアクティブプロジェクトに応じたタスクを初期化
   useEffect(() => {
@@ -245,6 +310,13 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     }
   }, []);
 
+  // 認証状態が変化したときにダッシュボードデータを読み込む
+  useEffect(() => {
+    if (authState.isAuthenticated && authState.user?.id) {
+      loadDashboardData();
+    }
+  }, [authState.isAuthenticated, authState.user?.id, loadDashboardData]);
+
   // 認証関連のハンドラー
   const handleLogin = async (credentials: LoginRequest): Promise<void> => {
     setAuthState(prev => ({ ...prev, isLoading: true }));
@@ -253,32 +325,39 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     try {
       console.log('Logging in with:', credentials);
 
-      // モックレスポンス（実際の実装では、APIからのレスポンスを使用）
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // 実際のAPIを呼び出し
+      const response = await userApi.login(credentials);
 
-      const mockUser: User = {
-        id: 'user-123',
-        email: credentials.email,
-        name: 'テストユーザー',
-        profile: {
-          grade: 'elementary4',
-          interests: ['science', 'nature'],
-          personality: ['curious', 'patient'],
-          strengths: ['observation', 'writing'],
-          duration: '2weeks'
-        },
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+      // APIレスポンスからユーザー情報を構築
+      const userProfile: UserProfile = {
+        grade: response.user.profile.grade,
+        interests: response.user.profile.interests,
+        personality: response.user.profile.personality,
+        strengths: response.user.profile.strengths,
+        duration: response.user.profile.preferredDuration
+      };
+
+      const user: User = {
+        id: response.user.profile.userId,
+        email: response.user.profile.email,
+        name: response.user.profile.displayName,
+        profile: userProfile,
+        createdAt: response.user.profile.createdAt,
+        updatedAt: response.user.profile.updatedAt
       };
 
       setAuthState({
         isAuthenticated: true,
-        user: mockUser,
-        token: 'mock-token-123',
+        user: user,
+        token: response.access_token,
         isLoading: false
       });
-      setUserProfile(mockUser.profile || null);
+      setUserProfile(userProfile);
+
+      console.log('✅ ログイン成功:', user.name);
+
     } catch (error) {
+      console.error('❌ ログインエラー:', error);
       setAuthError('ログインに失敗しました。メールアドレスとパスワードを確認してください。');
       setAuthState(prev => ({ ...prev, isLoading: false }));
     }
@@ -319,8 +398,11 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         isLoading: false
       });
       setUserProfile(userProfile);
+
+      console.log('✅ 新規登録成功:', user.name);
+
     } catch (error) {
-      console.error('Signup error:', error);
+      console.error('❌ 新規登録エラー:', error);
       setAuthError('アカウント作成に失敗しました。しばらく時間をおいて再度お試しください。');
       setAuthState(prev => ({ ...prev, isLoading: false }));
     }
@@ -363,47 +445,86 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     setTodaysTasks(newTasks);
   };
 
-  const handleThemeDecision = (theme: ResearchTheme) => {
-    // 既存のアクティブプロジェクトを過去のプロジェクトに移動
-    if (activeProjects.length > 0) {
-      const currentActive = activeProjects[0];
-      const completedProject: ResearchProject = {
-        ...currentActive,
-        status: 'completed',
-        actualEndDate: new Date().toISOString().split('T')[0],
-        progressPercentage: 100,
+  const handleThemeDecision = async (theme: ResearchTheme) => {
+    if (!authState.user?.id) {
+      console.error('ユーザーが認証されていません');
+      return;
+    }
+
+    try {
+      // 既存のアクティブプロジェクトを過去のプロジェクトに移動
+      if (activeProjects.length > 0) {
+        const currentActive = activeProjects[0];
+        // TODO: 実際にはプロジェクトの完了処理をAPIで行う
+        const completedProject: ResearchProject = {
+          ...currentActive,
+          status: 'completed',
+          actualEndDate: new Date().toISOString().split('T')[0],
+          progressPercentage: 100,
+          updatedAt: new Date().toISOString()
+        };
+
+        setPastProjects(prev => [completedProject, ...prev]);
+      }
+
+      // AWSにプロジェクトを作成
+      const targetEndDate = new Date(Date.now() + theme.estimatedDays * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+      const createProjectRequest = {
+        theme_id: theme.id,
+        title: theme.title,
+        description: theme.description,
+        genre: theme.genre,
+        estimated_days: theme.estimatedDays,
+        materials: theme.materials,
+        steps: theme.steps,
+        target_end_date: targetEndDate
+      };
+
+      const response = await userApi.createProjectFromTheme(authState.user.id, createProjectRequest);
+
+      if (response.success) {
+        console.log('✅ プロジェクト作成成功:', response.project.title);
+
+        // ダッシュボードデータを再読み込みして最新の状態を取得
+        await loadDashboardData();
+
+        setGeneratedThemes([]);
+        setSelectedTheme(null);
+      } else {
+        console.error('❌ プロジェクト作成失敗:', response.message);
+      }
+
+    } catch (error) {
+      console.error('❌ プロジェクト作成エラー:', error);
+
+      // エラーの場合はローカルで作成（フォールバック）
+      const newProject: ResearchProject = {
+        id: `project-${Date.now()}`,
+        userId: authState.user.id,
+        themeId: theme.id,
+        title: theme.title,
+        description: theme.description,
+        genre: theme.genre,
+        status: 'in_progress',
+        startDate: new Date().toISOString().split('T')[0],
+        targetEndDate: new Date(Date.now() + theme.estimatedDays * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        customMaterials: theme.materials,
+        customSteps: theme.steps,
+        progressPercentage: 0,
+        createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
 
-      setPastProjects(prev => [completedProject, ...prev]);
+      setActiveProjects([newProject]);
+
+      // 新しいタスクを生成
+      const newTasks = generateTasksForProject(newProject, 0);
+      setTodaysTasks(newTasks);
+
+      setGeneratedThemes([]);
+      setSelectedTheme(null);
     }
-
-    // 新しいプロジェクトを作成
-    const newProject: ResearchProject = {
-      id: `project-${Date.now()}`,
-      userId: authState.user?.id || 'user-1',
-      themeId: theme.id,
-      title: theme.title,
-      description: theme.description,
-      genre: theme.genre,
-      status: 'in_progress',
-      startDate: new Date().toISOString().split('T')[0],
-      targetEndDate: new Date(Date.now() + theme.estimatedDays * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      customMaterials: theme.materials,
-      customSteps: theme.steps,
-      progressPercentage: 0,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-
-    setActiveProjects([newProject]);
-
-    // 新しいタスクを生成
-    const newTasks = generateTasksForProject(newProject, 0);
-    setTodaysTasks(newTasks);
-
-    setGeneratedThemes([]);
-    setSelectedTheme(null);
   };
 
   // 記録関連のメソッド
@@ -500,6 +621,9 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     themeGenerationError,
     savedThemes,
     savedThemesLoading,
+    dashboardLoading,
+    dashboardError,
+    userStats,
     handleLogin,
     handleSignup,
     handleLogout,
@@ -513,7 +637,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     addRecord,
     updateRecord,
     generateThemesFromAPI,
-    loadSavedThemes
+    loadSavedThemes,
+    loadDashboardData
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

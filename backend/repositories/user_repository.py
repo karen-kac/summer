@@ -143,19 +143,30 @@ class UserRepository:
             UserResponse: ユーザー情報
         """
         try:
-            # GSI1でemailを使用してクエリ
-            # 注意: この実装では、emailをGSI1PKに含める必要があります
-            # 現在のモデルでは直接サポートされていないため、スキャンを使用
-
-            # 実際の実装では、emailインデックスを追加するか、
-            # 別テーブルでemail→user_idマッピングを管理することを推奨
+            # 一時的にスキャンを使用してemailでユーザーを検索
+            # 本番環境では、emailをGSIに追加することを推奨
 
             logger.warning("email検索は現在スキャンを使用します。本番環境では最適化が必要です。")
 
-            # 代替として、すべてのユーザーを取得してフィルタリング
-            # 本番環境では非効率なので、GSIを追加する必要があります
+            # DynamoDBのスキャン機能を使用してemailで検索
+            response = await self.db.scan_items(
+                filter_expression="email = :email AND SK = :sk",
+                expression_attribute_values={
+                    ':email': email,
+                    ':sk': 'PROFILE'
+                }
+            )
 
-            return None  # 現在未実装
+            if not response['items']:
+                logger.info(f"ユーザーが見つかりません: {email}")
+                return None
+
+            # 最初に見つかったユーザーを使用
+            profile_data = response['items'][0]
+            user_id = profile_data['userId']
+
+            # 完全なユーザー情報を取得
+            return await self.get_user_by_id(user_id)
 
         except Exception as e:
             logger.error(f"ユーザー取得エラー（email）: {email}, {e}")

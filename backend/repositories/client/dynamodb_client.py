@@ -185,6 +185,7 @@ class DynamoDBClient:
     async def query_items(self, pk: str, sk_prefix: str = None,
                          filter_expression: str = None,
                          expression_attribute_values: Dict[str, Any] = None,
+                         expression_attribute_names: Dict[str, str] = None,
                          limit: int = None,
                          last_evaluated_key: Dict[str, Any] = None) -> Dict[str, Any]:
         """
@@ -195,6 +196,7 @@ class DynamoDBClient:
             sk_prefix: ソートキーのプレフィックス
             filter_expression: フィルター式
             expression_attribute_values: 属性値
+            expression_attribute_names: 属性名マッピング
             limit: 取得制限
             last_evaluated_key: 前回のクエリの続きから取得
 
@@ -215,6 +217,9 @@ class DynamoDBClient:
             if filter_expression and expression_attribute_values:
                 params['FilterExpression'] = filter_expression
                 params['ExpressionAttributeValues'] = self._process_datetime_fields(expression_attribute_values)
+
+            if expression_attribute_names:
+                params['ExpressionAttributeNames'] = expression_attribute_names
 
             if limit:
                 params['Limit'] = limit
@@ -247,6 +252,7 @@ class DynamoDBClient:
     async def query_gsi(self, gsi_name: str, pk: str, sk_prefix: str = None,
                        filter_expression: str = None,
                        expression_attribute_values: Dict[str, Any] = None,
+                       expression_attribute_names: Dict[str, str] = None,
                        limit: int = None,
                        last_evaluated_key: Dict[str, Any] = None) -> Dict[str, Any]:
         """
@@ -258,6 +264,7 @@ class DynamoDBClient:
             sk_prefix: GSIソートキーのプレフィックス
             filter_expression: フィルター式
             expression_attribute_values: 属性値
+            expression_attribute_names: 属性名マッピング
             limit: 取得制限
             last_evaluated_key: 前回のクエリの続きから取得
 
@@ -279,6 +286,9 @@ class DynamoDBClient:
             if filter_expression and expression_attribute_values:
                 params['FilterExpression'] = filter_expression
                 params['ExpressionAttributeValues'] = self._process_datetime_fields(expression_attribute_values)
+
+            if expression_attribute_names:
+                params['ExpressionAttributeNames'] = expression_attribute_names
 
             if limit:
                 params['Limit'] = limit
@@ -303,6 +313,62 @@ class DynamoDBClient:
 
         except ClientError as e:
             logger.error(f"GSI{gsi_name}クエリ失敗: {e}")
+            return {'items': [], 'count': 0, 'scanned_count': 0, 'last_evaluated_key': None}
+        except Exception as e:
+            logger.error(f"予期しないエラー: {e}")
+            return {'items': [], 'count': 0, 'scanned_count': 0, 'last_evaluated_key': None}
+
+    async def scan_items(self, filter_expression: str = None,
+                        expression_attribute_values: Dict[str, Any] = None,
+                        expression_attribute_names: Dict[str, str] = None,
+                        limit: int = None,
+                        last_evaluated_key: Dict[str, Any] = None) -> Dict[str, Any]:
+        """
+        テーブルをスキャン
+
+        Args:
+            filter_expression: フィルター式
+            expression_attribute_values: 属性値
+            expression_attribute_names: 属性名マッピング
+            limit: 取得制限
+            last_evaluated_key: 前回のスキャンの続きから取得
+
+        Returns:
+            Dict[str, Any]: スキャン結果
+        """
+        try:
+            params = {}
+
+            if filter_expression and expression_attribute_values:
+                params['FilterExpression'] = filter_expression
+                params['ExpressionAttributeValues'] = self._process_datetime_fields(expression_attribute_values)
+
+            if expression_attribute_names:
+                params['ExpressionAttributeNames'] = expression_attribute_names
+
+            if limit:
+                params['Limit'] = limit
+
+            if last_evaluated_key:
+                params['ExclusiveStartKey'] = last_evaluated_key
+
+            response = self.table.scan(**params)
+
+            # 結果の処理
+            items = [self._process_datetime_fields_reverse(item) for item in response.get('Items', [])]
+
+            result = {
+                'items': items,
+                'count': response.get('Count', 0),
+                'scanned_count': response.get('ScannedCount', 0),
+                'last_evaluated_key': response.get('LastEvaluatedKey')
+            }
+
+            logger.info(f"スキャン成功: count={result['count']}")
+            return result
+
+        except ClientError as e:
+            logger.error(f"スキャン失敗: {e}")
             return {'items': [], 'count': 0, 'scanned_count': 0, 'last_evaluated_key': None}
         except Exception as e:
             logger.error(f"予期しないエラー: {e}")

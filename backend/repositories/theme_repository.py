@@ -199,6 +199,39 @@ class ThemeRepository:
             logger.error(f"研究計画保存エラー: {e}")
             return None
 
+    async def get_plan_by_theme_id(self, theme_id: str) -> Optional[ResearchPlan]:
+        """
+        テーマIDで研究計画を取得
+
+        Args:
+            theme_id: テーマID
+
+        Returns:
+            ResearchPlan: 研究計画
+        """
+        if not self.db:
+            logger.error("DynamoDBクライアントが設定されていません")
+            return None
+
+        try:
+            # テーマIDで研究計画を検索（スキャン操作）
+            # 実際の実装では、GSIやスキャンフィルターを使用
+            result = await self.db.scan_items(
+                filter_expression="themeId = :theme_id",
+                expression_attribute_values={":theme_id": theme_id}
+            )
+
+            if result and isinstance(result, dict) and 'items' in result:
+                for item in result['items']:
+                    if isinstance(item, dict) and item.get("Type") == "RESEARCH_PLAN":
+                        return ResearchPlan(**item)
+
+            return None
+
+        except Exception as e:
+            logger.error(f"研究計画取得エラー（テーマID: {theme_id}）: {e}")
+            return None
+
     async def get_plan_by_id(self, plan_id: str) -> Optional[ResearchPlan]:
         """
         計画IDで研究計画を取得
