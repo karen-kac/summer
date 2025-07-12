@@ -255,67 +255,135 @@ const ActiveProjectPage: React.FC<ActiveProjectPageProps> = ({
     setIsLoadingPlan(true);
     setPlanError(null);
 
-    try {
-      // まず既存の研究計画を取得を試行
-      const existingPlanResponse = await themeApi.getResearchPlan(themeId);
+    console.log('🔄 研究計画を読み込み中...', {
+      themeId,
+      projectTitle: project.title,
+      projectGenre: project.genre
+    });
 
-      if (existingPlanResponse.success && existingPlanResponse.plan) {
-        const aiSteps = convertAIStepsToTemplate(existingPlanResponse.plan.steps);
-        setProjectSteps(aiSteps);
-        setIsUsingAIPlan(true);
-        setPlanStatus('cached');
-        return;
-      }
-
-      // 既存の研究計画がない場合、新しく生成
-      const generateResponse = await themeApi.generateResearchPlan(themeId);
-
-      if (generateResponse.success && generateResponse.plan) {
-        const aiSteps = convertAIStepsToTemplate(generateResponse.plan.steps);
-        setProjectSteps(aiSteps);
-        setIsUsingAIPlan(true);
-        setPlanStatus('generated');
-      } else {
-        const defaultSteps = getDefaultStepTemplates(project.genre || 'experiment');
-        setProjectSteps(defaultSteps);
-        setIsUsingAIPlan(false);
-        setPlanStatus('default');
-      }
-    } catch (error) {
-      setPlanError('研究計画の取得に失敗しました。デフォルトプランを使用します。');
+    // テーマIDの有効性を厳密にチェック
+    if (!themeId ||
+        themeId === '' ||
+        themeId === 'undefined' ||
+        themeId.startsWith('project-')) {
+      console.warn('⚠️ 無効なテーマIDが検出されました。デフォルトプランを使用します:', themeId);
       const defaultSteps = getDefaultStepTemplates(project.genre || 'experiment');
       setProjectSteps(defaultSteps);
       setIsUsingAIPlan(false);
       setPlanStatus('default');
+      setPlanError('無効なテーマIDのため、デフォルトプランを使用しています。');
+      setIsLoadingPlan(false);
+      return;
+    }
+
+    try {
+      // generate_research_plan を直接呼び出す
+      // このAPIは既存の研究計画があるかチェックして、ない場合は新規生成する
+      const response = await themeApi.generateResearchPlan(themeId);
+
+      console.log('📊 研究計画API応答:', response);
+
+      if (response.success && response.plan) {
+        const aiSteps = convertAIStepsToTemplate(response.plan.steps);
+        setProjectSteps(aiSteps);
+        setIsUsingAIPlan(true);
+
+        // メッセージから生成されたか既存だったかを判定
+        if (response.message.includes('保存された研究計画')) {
+          setPlanStatus('cached');
+        } else {
+          setPlanStatus('generated');
+        }
+
+        console.log(`✅ 研究計画を読み込みました: ${response.plan.theme_title}`);
+      } else {
+        console.warn('⚠️ AI研究計画の取得に失敗、デフォルトプランを使用します');
+        console.warn('エラー詳細:', response.message);
+
+        const defaultSteps = getDefaultStepTemplates(project.genre || 'experiment');
+        setProjectSteps(defaultSteps);
+        setIsUsingAIPlan(false);
+        setPlanStatus('default');
+        setPlanError('テーマが見つからないため、デフォルトプランを使用しています。');
+      }
+    } catch (error) {
+      console.error('❌ 研究計画の取得でエラーが発生しました:', error);
+      const defaultSteps = getDefaultStepTemplates(project.genre || 'experiment');
+      setProjectSteps(defaultSteps);
+      setIsUsingAIPlan(false);
+      setPlanStatus('default');
+      setPlanError('ネットワークエラーのため、デフォルトプランを使用しています。');
     } finally {
       setIsLoadingPlan(false);
     }
   };
 
   useEffect(() => {
+    console.log('🔍 ActiveProjectPageにプロジェクトデータが渡されました:', {
+      id: project.id,
+      title: project.title,
+      themeId: project.themeId,
+      currentStepIndex: project.currentStepIndex,
+      progressPercentage: project.progressPercentage,
+      genre: project.genre,
+      status: project.status,
+      updatedAt: project.updatedAt
+    });
+
     // プロジェクトにthemeIdがある場合、研究計画を取得
-    if (project.themeId) {
+    if (project.themeId && project.themeId !== '' && project.themeId !== 'undefined') {
+      console.log('✅ 有効なテーマIDが見つかりました:', project.themeId);
       loadResearchPlan(project.themeId);
     } else {
+      console.warn('⚠️ 無効なテーマIDです。デフォルトプランを使用します。', {
+        themeId: project.themeId,
+        projectTitle: project.title
+      });
       const defaultSteps = getDefaultStepTemplates(project.genre || 'experiment');
       setProjectSteps(defaultSteps);
       setIsUsingAIPlan(false);
       setPlanStatus('default');
+      setPlanError('プロジェクトにテーマIDが設定されていないため、デフォルトプランを使用しています。');
     }
   }, [project]);
 
   useEffect(() => {
     if (projectSteps.length > 0) {
-      // プロジェクトの進捗から現在のステップを計算
-      const progressIndex = Math.floor((project.progressPercentage / 100) * projectSteps.length);
-      setCurrentStepIndex(Math.min(progressIndex, projectSteps.length - 1));
+      // 保存されたcurrentStepIndexを優先的に使用
+      if (project.currentStepIndex !== undefined && project.currentStepIndex >= 0) {
+        const newStepIndex = Math.min(project.currentStepIndex, projectSteps.length - 1);
+        console.log('📍 保存されたステップインデックスを使用:', newStepIndex);
+        setCurrentStepIndex(newStepIndex);
+      } else {
+        // fallback: プロジェクトの進捗から現在のステップを計算
+        const progressIndex = Math.floor((project.progressPercentage / 100) * projectSteps.length);
+        const newStepIndex = Math.min(progressIndex, projectSteps.length - 1);
+        console.log('📍 進捗からステップインデックスを計算:', newStepIndex);
+        setCurrentStepIndex(newStepIndex);
+      }
     }
-  }, [project.progressPercentage, projectSteps]);
+  }, [project.currentStepIndex, project.progressPercentage, projectSteps, project.id]);
 
   const handleStepComplete = () => {
+    console.log('🚀 ステップ完了ボタンがクリックされました:', {
+      projectId: project.id,
+      currentStepIndex,
+      totalSteps: projectSteps.length,
+      isLastStep: currentStepIndex >= projectSteps.length - 1
+    });
+
     if (currentStepIndex < projectSteps.length - 1) {
       const newStepIndex = currentStepIndex + 1;
+      console.log('➡️ 次のステップに進みます:', {
+        from: currentStepIndex,
+        to: newStepIndex
+      });
       setCurrentStepIndex(newStepIndex);
+      onUpdateProgress(project.id, newStepIndex);
+    } else {
+      // 最後のステップの場合、プロジェクトを完了状態にする
+      console.log('🏁 最後のステップです。プロジェクトを完了させます');
+      const newStepIndex = currentStepIndex;
       onUpdateProgress(project.id, newStepIndex);
     }
   };
@@ -422,11 +490,11 @@ const ActiveProjectPage: React.FC<ActiveProjectPageProps> = ({
         </div>
       )}
 
-      {planStatus && (
+      {/* {planStatus && (
         <div className="plan-status-notice">
           <span>ℹ️ {getPlanStatusMessage()}</span>
         </div>
-      )}
+      )} */}
 
       <div className="active-project-content">
         <div className="steps-timeline">

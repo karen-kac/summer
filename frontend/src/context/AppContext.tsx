@@ -271,17 +271,59 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     try {
       const response = await userApi.getDashboardData(authState.user.id);
 
+      console.log('🔍 ダッシュボードAPIレスポンス:', response);
+      console.log('🔍 APIレスポンスの詳細:', {
+        active_projects: response.active_projects,
+        active_projects_type: typeof response.active_projects,
+        active_projects_length: response.active_projects?.length || 0,
+        past_projects: response.past_projects,
+        user_stats: response.user_stats
+      });
+
       // プロジェクトデータを設定
-      setActiveProjects(response.active_projects || []);
+      const activeProjects = response.active_projects || [];
+      console.log('📋 設定するアクティブプロジェクト:', activeProjects);
+
+      // 各プロジェクトのIDを詳しく確認
+      activeProjects.forEach((project, index) => {
+        console.log(`📋 プロジェクト${index}:`, {
+          id: project.id,
+          id_type: typeof project.id,
+          PK: project.PK,
+          projectId: project.projectId,
+          title: project.title,
+          keys: Object.keys(project)
+        });
+      });
+      setActiveProjects(activeProjects);
       setPastProjects(response.past_projects || []);
       setUserStats(response.user_stats);
 
-      // 最初のアクティブプロジェクトがある場合、タスクを生成
-      if (response.active_projects?.length > 0) {
-        const currentProject = response.active_projects[0];
+      // 最初のアクティブプロジェクトがある場合、詳細をログ出力してタスクを生成
+      if (activeProjects.length > 0) {
+        const currentProject = activeProjects[0];
+        console.log('📋 現在のアクティブプロジェクト:', {
+          id: currentProject.id,
+          title: currentProject.title,
+          currentStepIndex: currentProject.currentStepIndex,
+          progressPercentage: currentProject.progressPercentage,
+          genre: currentProject.genre,
+          status: currentProject.status
+        });
+
         const totalSteps = getStepCount(currentProject.genre || 'experiment');
-        const currentStepIndex = Math.floor((currentProject.progressPercentage / 100) * totalSteps);
-        const stepIndex = Math.min(currentStepIndex, totalSteps - 1);
+
+        // currentStepIndexが存在する場合はそれを使用、なければ進捗から計算
+        let stepIndex;
+        if (currentProject.currentStepIndex !== undefined && currentProject.currentStepIndex >= 0) {
+          stepIndex = Math.min(currentProject.currentStepIndex, totalSteps - 1);
+          console.log('📍 保存されたcurrentStepIndexを使用:', stepIndex);
+        } else {
+          stepIndex = Math.floor((currentProject.progressPercentage / 100) * totalSteps);
+          stepIndex = Math.min(stepIndex, totalSteps - 1);
+          console.log('📍 進捗からステップインデックスを計算:', stepIndex);
+        }
+
         const tasks = generateTasksForProject(currentProject, stepIndex);
         setTodaysTasks(tasks);
       }
@@ -312,6 +354,12 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
 
   // 認証状態が変化したときにダッシュボードデータを読み込む
   useEffect(() => {
+    console.log('🔐 認証状態変化:', {
+      isAuthenticated: authState.isAuthenticated,
+      userId: authState.user?.id,
+      willLoadDashboard: authState.isAuthenticated && authState.user?.id
+    });
+
     if (authState.isAuthenticated && authState.user?.id) {
       loadDashboardData();
     }
@@ -420,29 +468,122 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     setSelectedTheme(null);
   };
 
-  const handleUpdateProjectProgress = (projectId: string, stepIndex: number) => {
+  const handleUpdateProjectProgress = async (projectId: string, stepIndex: number) => {
     const project = activeProjects.find(p => p.id === projectId);
-    if (!project) return;
+    if (!project) {
+      console.warn('⚠️ プロジェクトが見つかりません:', projectId);
+      return;
+    }
 
     const totalSteps = getStepCount(project.genre || 'experiment');
     const progressPercentage = Math.round(((stepIndex + 1) / totalSteps) * 100);
 
-    setActiveProjects(prev =>
-      prev.map(p =>
-        p.id === projectId
-          ? { ...p, progressPercentage, updatedAt: new Date().toISOString() }
-          : p
-      )
-    );
+    console.log('🔄 プロジェクト進捗更新中:', {
+      projectId,
+      stepIndex,
+      totalSteps,
+      progressPercentage
+    });
 
-    if (selectedProject && selectedProject.id === projectId) {
-      setSelectedProject(prev =>
-        prev ? { ...prev, progressPercentage, updatedAt: new Date().toISOString() } : null
+    try {
+      // APIを呼び出してAWSに進捗を保存
+      const response = await userApi.updateProjectProgress(projectId, {
+        current_step_index: stepIndex,
+        progress_percentage: progressPercentage,
+        status: progressPercentage >= 100 ? 'completed' : 'in_progress'
+      });
+
+      if (response.success) {
+        console.log('✅ プロジェクト進捗更新成功:', response.message);
+
+        // ローカルstateを更新 - currentStepIndexも含める
+        const updatedProject: ResearchProject = {
+          ...project,
+          currentStepIndex: stepIndex,
+          progressPercentage,
+          updatedAt: new Date().toISOString(),
+          status: progressPercentage >= 100 ? 'completed' as const : 'in_progress' as const
+        };
+
+        // プロジェクトが100%完了した場合、過去のプロジェクトに移動
+        if (progressPercentage >= 100) {
+          const completedProject = {
+            ...updatedProject,
+            status: 'completed' as const,
+            actualEndDate: new Date().toISOString().split('T')[0]
+          };
+
+          setActiveProjects(prev => prev.filter(p => p.id !== projectId));
+          setPastProjects(prev => [completedProject, ...prev]);
+
+          if (selectedProject && selectedProject.id === projectId) {
+            setSelectedProject(null);
+          }
+
+          console.log('🎉 プロジェクト完了！過去のプロジェクトに移動しました');
+        } else {
+          setActiveProjects(prev =>
+            prev.map(p =>
+              p.id === projectId ? updatedProject : p
+            )
+          );
+
+          if (selectedProject && selectedProject.id === projectId) {
+            setSelectedProject(updatedProject);
+          }
+
+          const newTasks = generateTasksForProject(updatedProject, stepIndex);
+          setTodaysTasks(newTasks);
+        }
+
+      } else {
+        console.error('❌ プロジェクト進捗更新失敗:', response.message);
+
+        // APIエラーでもローカル状態は更新（オフライン対応）
+        const updatedProject: ResearchProject = {
+          ...project,
+          currentStepIndex: stepIndex,
+          progressPercentage,
+          updatedAt: new Date().toISOString()
+        };
+
+        setActiveProjects(prev =>
+          prev.map(p =>
+            p.id === projectId ? updatedProject : p
+          )
+        );
+
+        if (selectedProject && selectedProject.id === projectId) {
+          setSelectedProject(updatedProject);
+        }
+
+        const newTasks = generateTasksForProject(updatedProject, stepIndex);
+        setTodaysTasks(newTasks);
+      }
+    } catch (error) {
+      console.error('❌ プロジェクト進捗更新エラー:', error);
+
+      // エラーが発生してもローカルstateは更新（オフライン対応）
+      const updatedProject: ResearchProject = {
+        ...project,
+        currentStepIndex: stepIndex,
+        progressPercentage,
+        updatedAt: new Date().toISOString()
+      };
+
+      setActiveProjects(prev =>
+        prev.map(p =>
+          p.id === projectId ? updatedProject : p
+        )
       );
-    }
 
-    const newTasks = generateTasksForProject(project, stepIndex);
-    setTodaysTasks(newTasks);
+      if (selectedProject && selectedProject.id === projectId) {
+        setSelectedProject(updatedProject);
+      }
+
+      const newTasks = generateTasksForProject(updatedProject, stepIndex);
+      setTodaysTasks(newTasks);
+    }
   };
 
   const handleThemeDecision = async (theme: ResearchTheme) => {
@@ -452,22 +593,15 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     }
 
     try {
-      // 既存のアクティブプロジェクトを過去のプロジェクトに移動
-      if (activeProjects.length > 0) {
-        const currentActive = activeProjects[0];
-        // TODO: 実際にはプロジェクトの完了処理をAPIで行う
-        const completedProject: ResearchProject = {
-          ...currentActive,
-          status: 'completed',
-          actualEndDate: new Date().toISOString().split('T')[0],
-          progressPercentage: 100,
-          updatedAt: new Date().toISOString()
-        };
+      console.log('🎯 新しいテーマでプロジェクトを作成中...', theme.title);
 
-        setPastProjects(prev => [completedProject, ...prev]);
+      // 既存のアクティブプロジェクトがあるかチェック
+      const hasActiveProject = activeProjects.length > 0;
+      if (hasActiveProject) {
+        console.log('⚠️ 既存のアクティブプロジェクトを過去の研究として保存します');
       }
 
-      // AWSにプロジェクトを作成
+      // AWSにプロジェクトを作成（バックエンドが既存のアクティブプロジェクトを自動的に処理）
       const targetEndDate = new Date(Date.now() + theme.estimatedDays * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
       const createProjectRequest = {
@@ -486,35 +620,71 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       if (response.success) {
         console.log('✅ プロジェクト作成成功:', response.project.title);
 
+        // 既存のプロジェクトが保存された場合の通知
+        if (response.previous_projects_saved && response.previous_projects_saved > 0) {
+          console.log(`📚 ${response.previous_projects_saved}個の既存の研究を過去の研究として保存しました`);
+        }
+
         // ダッシュボードデータを再読み込みして最新の状態を取得
         await loadDashboardData();
 
+        console.log('ℹ️ プロジェクト作成完了。');
+
         setGeneratedThemes([]);
         setSelectedTheme(null);
+
+        console.log('🎉 新しい研究プロジェクトを開始しました！');
       } else {
         console.error('❌ プロジェクト作成失敗:', response.message);
+        throw new Error(response.message || 'プロジェクト作成に失敗しました');
       }
 
     } catch (error) {
       console.error('❌ プロジェクト作成エラー:', error);
 
       // エラーの場合はローカルで作成（フォールバック）
-      const newProject: ResearchProject = {
-        id: `project-${Date.now()}`,
-        userId: authState.user.id,
-        themeId: theme.id,
-        title: theme.title,
-        description: theme.description,
-        genre: theme.genre,
-        status: 'in_progress',
-        startDate: new Date().toISOString().split('T')[0],
-        targetEndDate: new Date(Date.now() + theme.estimatedDays * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        customMaterials: theme.materials,
-        customSteps: theme.steps,
-        progressPercentage: 0,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
+      console.log('🔄 フォールバック: ローカルでプロジェクトを作成します');
+
+      // 既存のアクティブプロジェクトをローカルで過去のプロジェクトに移動
+      if (activeProjects.length > 0) {
+        const currentActive = activeProjects[0];
+        const completedProject: ResearchProject = {
+          ...currentActive,
+          status: 'completed',
+          actualEndDate: new Date().toISOString().split('T')[0],
+          progressPercentage: 100,
+          updatedAt: new Date().toISOString()
+        };
+
+        setPastProjects(prev => [completedProject, ...prev]);
+        console.log('📚 既存の研究をローカルで過去の研究として保存しました');
+      }
+
+              // ローカルプロジェクトではテーマIDを無効にして、デフォルトプランを使用
+        const newProject: ResearchProject = {
+          id: `project-${Date.now()}`,
+          userId: authState.user.id,
+          themeId: '', // ローカルプロジェクトではテーマIDを空にしてデフォルトプランを使用
+          title: theme.title,
+          description: theme.description,
+          genre: theme.genre,
+          status: 'in_progress',
+          startDate: new Date().toISOString().split('T')[0],
+          targetEndDate: new Date(Date.now() + theme.estimatedDays * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          customMaterials: theme.materials,
+          customSteps: theme.steps,
+          progressPercentage: 0,
+          currentStepIndex: 0,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+
+        console.log('💾 フォールバック: ローカルプロジェクト作成:', {
+          projectId: newProject.id,
+          themeId: newProject.themeId,
+          title: newProject.title,
+          note: 'デフォルトプランを使用します'
+        });
 
       setActiveProjects([newProject]);
 
@@ -524,6 +694,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
 
       setGeneratedThemes([]);
       setSelectedTheme(null);
+
+      console.log('💾 ローカルで新しい研究プロジェクトを作成しました');
     }
   };
 

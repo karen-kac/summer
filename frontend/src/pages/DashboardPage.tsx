@@ -181,7 +181,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
       <div className="quick-actions-row">
         <button className="quick-action-btn" onClick={onOpenAITutor}>
           <span className="qa-icon">🤖</span>
-          <span className="qa-label">AI先生</span>
+          <span className="qa-label">使い方</span>
         </button>
         <button className="quick-action-btn" onClick={onViewRecords}>
           <span className="qa-icon">📝</span>

@@ -61,6 +61,21 @@ export interface CreateProjectResponse {
   success: boolean;
   project: any;
   message: string;
+  previous_projects_saved?: number;
+}
+
+// プロジェクト進捗更新用の型定義
+export interface UpdateProjectProgressRequest {
+  current_step_index: number;
+  progress_percentage: number;
+  status?: string;
+}
+
+export interface UpdateProjectProgressResponse {
+  success: boolean;
+  message: string;
+  current_step_index: number;
+  progress_percentage: number;
 }
 
 // APIエラー型
@@ -129,6 +144,20 @@ class ApiClient {
   async get<T>(endpoint: string): Promise<T> {
     return this.request<T>(endpoint, {
       method: 'GET',
+    });
+  }
+
+  async put<T>(endpoint: string, data: any): Promise<T> {
+    return this.request<T>(endpoint, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async patch<T>(endpoint: string, data: any): Promise<T> {
+    return this.request<T>(endpoint, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
     });
   }
 }
@@ -234,6 +263,13 @@ class UserApi {
    */
   async createProjectFromTheme(userId: string, request: CreateProjectRequest): Promise<CreateProjectResponse> {
     return this.client.post<CreateProjectResponse>(`/user/projects?user_id=${userId}`, request);
+  }
+
+  /**
+   * プロジェクトの進捗を更新する
+   */
+  async updateProjectProgress(projectId: string, request: UpdateProjectProgressRequest): Promise<UpdateProjectProgressResponse> {
+    return this.client.put<UpdateProjectProgressResponse>(`/user/projects/${projectId}/progress`, request);
   }
 }
 

@@ -153,6 +153,7 @@ export interface ResearchProject {
   customMaterials: string[];
   customSteps: string[];
   progressPercentage: number;
+  currentStepIndex: number;
   createdAt: string;
   updatedAt: string;
 }
