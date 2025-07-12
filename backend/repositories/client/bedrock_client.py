@@ -32,7 +32,10 @@ class BedrockClient:
                 aws_access_key_id=aws_access_key,
                 aws_secret_access_key=aws_secret_key
             )
-            self.model_id = "anthropic.claude-3-haiku-20240307-v1:0"
+            self.model_id = os.environ.get("BEDROCK_MODEL_ID")
+            
+            if not self.model_id:
+                raise ValueError("BedrockモデルIDが設定されていません。")
 
         except ValueError as e:
             raise RuntimeError(str(e))
