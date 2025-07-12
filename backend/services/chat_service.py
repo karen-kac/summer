@@ -1,18 +1,16 @@
-import boto3
 import json
-import base64
 from typing import List, Optional, Dict, Any
 from models.chat import ChatMessage, ChatResponse, MessageType
-import os
 from pathlib import Path
+from utils.prompt_builder import PromptBuilder
+from repositories.client.bedrock_client import BedrockClient
+from repositories.theme_repository import ThemeRepository
 
 class ChatService:
     def __init__(self):
-        self.bedrock = boto3.client(
-            'bedrock-runtime',
-            region_name=os.getenv('BEDROCK_REGION', 'us-east-1')
-        )
-        self.model_id = os.getenv('BEDROCK_MODEL_ID')
+        prompt_builder = PromptBuilder()
+        bedrock_client = BedrockClient()
+        self.theme_repository = ThemeRepository(prompt_builder, bedrock_client)
     
     async def process_chat_message(self, user_id: str, project_id: str, message: str, 
                                  message_type: MessageType = MessageType.TEXT, 
@@ -27,13 +25,16 @@ class ChatService:
             media_analysis = await self._analyze_media(media_url, message_type)
         
         # AIレスポンス生成
-        ai_response = await self._generate_ai_response(
+        ai_message = await self.theme_repository.process_chat_message(
             message, project_context, media_analysis
         )
         
+        # 提案を抽出
+        suggestions = self._extract_suggestions(ai_message, project_context.get('phase', 'planning'))
+        
         return ChatResponse(
-            message=ai_response["message"],
-            suggestions=ai_response.get("suggestions"),
+            message=ai_message,
+            suggestions=suggestions,
             media_analysis=media_analysis
         )
     
@@ -47,6 +48,16 @@ class ChatService:
         except Exception as e:
             print(f"JSONファイル読み込みエラー: {e}")
         return []
+    
+    def _get_project_progress_percentage(self, project_id: str) -> float:
+        """プロジェクトの進捗率を取得"""
+        try:
+            # 実際のプロジェクトデータからprogressPercentageを取得
+            # ここではデモ用に30%を返す（実装時はDynamoDBから取得）
+            return 30.0
+        except Exception as e:
+            print(f"進捗率取得エラー: {e}")
+            return 0.0
     
     async def _get_project_context(self, project_id: str) -> dict:
         try:
@@ -69,9 +80,11 @@ class ChatService:
                 steps = current_plan.get("steps", [])
                 total_steps = len(steps)
                 
-                # 現在のステップを仮定（実際の進捗管理がある場合はそちらを使用）
-                current_step_index = 0  # デフォルトは最初のステップ
-                progress = (current_step_index / total_steps) * 100 if total_steps > 0 else 0
+                # project.progressPercentageから現在のステップを計算
+                project_progress = self._get_project_progress_percentage(project_id)
+                current_step_index = int((project_progress / 100) * total_steps) if total_steps > 0 else 0
+                current_step_index = min(current_step_index, total_steps - 1)  # 範囲制限
+                progress = project_progress
                 
                 # 進捗からフェーズを判定
                 if progress < 20:
@@ -140,87 +153,7 @@ class ChatService:
         except Exception as e:
             return f"画像解析でエラーが発生しました: {str(e)}"
     
-    async def _generate_ai_response(self, message: str, project_context: dict, 
-                                  media_analysis: Optional[str] = None) -> dict:
-        
-        phase = project_context.get("phase", "theme_selection")
-        theme = project_context.get("theme", "未設定")
-        
-        # 進捗に応じたプロンプト
-        phase_prompts = {
-            "theme_selection": "テーマ選びをサポートする優しいAI先生として回答してください。",
-            "observation": "観察記録をサポートする先生として、観察のコツやポイントを教えてください。",
-            "experiment": "実験をサポートする先生として、安全で楽しい実験方法を提案してください。",
-            "report": "レポート作成をサポートする先生として、まとめ方のコツを教えてください。"
-        }
-        
-        # 現在のステップ情報を取得
-        current_step_info = ""
-        if project_context.get('currentStepTitle'):
-            current_step_info = f"""
-        【現在のステップ詳細】
-        - ステップ名: {project_context.get('currentStepTitle')}
-        - ステップ説明: {project_context.get('description', '')}
-        - ポイント: {', '.join(project_context.get('currentStepTips', []))}
-        """
-        
-        system_prompt = f"""
-        あなたは小学生の自由研究をサポートするAI先生です。
-        
-        【現在の研究情報】
-        - 研究タイトル: {project_context.get('title', '未設定')}
-        - 研究テーマ: {theme}
-        - 研究タイプ: {project_context.get('genre', 'experiment')}
-        - 難易度: {project_context.get('difficulty', 'medium')}
-        - 予定日数: {project_context.get('estimatedDays', 0)}日
-        - 進捗状況: {project_context.get('progress', 0):.1f}%
-        - 現在のフェーズ: {phase}
-        - ステータス: {project_context.get('status', 'planning')}
-        - 現在のステップ: {project_context.get('currentStep', 0) + 1}/{project_context.get('totalSteps', 1)}
-        {current_step_info}
-        
-        {phase_prompts.get(phase, "優しくサポートしてください。")}
-        
-        以下の点を心がけてください：
-        - 小学生にもわかりやすい言葉で説明
-        - 現在のステップと進捗状況を考慮した具体的なアドバイス
-        - 安全性を最優先
-        - 子どもの好奇心を刺激する内容
-        - 次に何をすべきかを明確に提案
-        - 現在のステップのポイントを参考にアドバイス
-        """
-        
-        user_content = message
-        if media_analysis:
-            user_content += f"\n\n画像解析結果: {media_analysis}"
-        
-        try:
-            response = self.bedrock.invoke_model(
-                modelId=self.model_id,
-                body=json.dumps({
-                    "anthropic_version": "bedrock-2023-05-31",
-                    "max_tokens": 800,
-                    "system": system_prompt,
-                    "messages": [{"role": "user", "content": user_content}]
-                })
-            )
-            
-            result = json.loads(response['body'].read())
-            ai_message = result['content'][0]['text']
-            
-            # 提案を抽出（簡単な実装）
-            suggestions = self._extract_suggestions(ai_message, phase)
-            
-            return {
-                "message": ai_message,
-                "suggestions": suggestions
-            }
-            
-        except Exception as e:
-            return {
-                "message": f"申し訳ありません。エラーが発生しました: {str(e)}",
-                "suggestions": ["もう一度試してみてください"]
-            }
+
     
     def _extract_suggestions(self, message: str, phase: str) -> List[str]:
         # 簡単な提案抽出（実際はより高度な処理が必要）

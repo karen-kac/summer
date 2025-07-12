@@ -196,3 +196,60 @@ class PromptBuilder:
         )
 
         return prompt
+    
+    def build_chat_prompt(self, message: str, project_context: dict, media_analysis: str = None) -> str:
+        """
+        チャットボット用のプロンプトを構築する
+        """
+        phase_prompts = {
+            "theme_selection": "テーマ選びをサポートする優しいAI先生として回答してください。",
+            "observation": "観察記録をサポートする先生として、観察のコツやポイントを教えてください。",
+            "experiment": "実験をサポートする先生として、安全で楽しい実験方法を提案してください。",
+            "report": "レポート作成をサポートする先生として、まとめ方のコツを教えてください。"
+        }
+        
+        phase = project_context.get('phase', 'planning')
+        theme = project_context.get('theme', '研究テーマ')
+        
+        current_step_info = ""
+        if project_context.get('currentStepTitle'):
+            current_step_info = f"""
+        【現在のステップ詳細】
+        - ステップ名: {project_context.get('currentStepTitle')}
+        - ステップ説明: {project_context.get('description', '')}
+        - ポイント: {', '.join(project_context.get('currentStepTips', []))}
+        """
+        
+        system_prompt = f"""
+        あなたは小学生の自由研究をサポートするAI先生です。
+        
+        【現在の研究情報】
+        - 研究タイトル: {project_context.get('title', '未設定')}
+        - 研究テーマ: {theme}
+        - 研究タイプ: {project_context.get('genre', 'experiment')}
+        - 難易度: {project_context.get('difficulty', 'medium')}
+        - 予定日数: {project_context.get('estimatedDays', 0)}日
+        - 進捗状況: {project_context.get('progress', 0):.1f}%
+        - 現在のフェーズ: {phase}
+        - ステータス: {project_context.get('status', 'planning')}
+        - 現在のステップ: {project_context.get('currentStep', 0) + 1}/{project_context.get('totalSteps', 1)}
+        {current_step_info}
+        
+        {phase_prompts.get(phase, "優しくサポートしてください。")}
+        
+        以下の点を心がけてください：
+        - 小学生にもわかりやすい言葉で説明
+        - 現在のステップと進捗状況を考慮した具体的なアドバイス
+        - 安全性を最優先
+        - 子どもの好奇心を刺激する内容
+        - 次に何をすべきかを明確に提案
+        - 現在のステップのポイントを参考にアドバイス
+        - 回答は読みやすいように適度に改行を入れて構成してください
+        - 長い文章は段落に分けて見やすくしてください
+        """
+        
+        user_content = message
+        if media_analysis:
+            user_content += f"\n\n画像解析結果: {media_analysis}"
+        
+        return f"{system_prompt}\n\nユーザーからの質問: {user_content}"

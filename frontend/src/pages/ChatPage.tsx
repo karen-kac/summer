@@ -9,19 +9,22 @@ export const ChatPage: React.FC = () => {
   
   // 現在のアクティブプロジェクトを取得
   const currentProject = selectedProject || activeProjects[0];
+  
+  // currentProjectがない場合はダッシュボードにリダイレクト
+  if (!currentProject) {
+    navigate('/dashboard');
+    return null;
+  }
+  
   const userId = "user123";
-  const projectId = currentProject?.id || "default_project";
+  const projectId = currentProject.id;
 
   const handleBackToDashboard = () => {
     navigate('/dashboard');
   };
 
   const handleBackToProject = () => {
-    if (currentProject) {
-      navigate(`/project/${currentProject.id}`);
-    } else {
-      navigate('/dashboard');
-    }
+    navigate(`/project/${currentProject.id}`);
   };
 
   return (
@@ -40,20 +43,18 @@ export const ChatPage: React.FC = () => {
         </div>
       </div>
       
-      {currentProject && (
-        <div style={{ 
-          padding: '10px 15px', 
-          backgroundColor: '#e3f2fd', 
-          borderRadius: '8px', 
-          marginBottom: '20px',
-          border: '1px solid #bbdefb'
-        }}>
-          <strong>現在の研究:</strong> {currentProject.title} 
-          <span style={{ marginLeft: '10px', fontSize: '0.9em', color: '#666' }}>
-            (進捗: {currentProject.progressPercentage}%)
-          </span>
-        </div>
-      )}
+      <div style={{ 
+        padding: '10px 15px', 
+        backgroundColor: '#e3f2fd', 
+        borderRadius: '8px', 
+        marginBottom: '20px',
+        border: '1px solid #bbdefb'
+      }}>
+        <strong>現在の研究:</strong> {currentProject.title} 
+        <span style={{ marginLeft: '10px', fontSize: '0.9em', color: '#666' }}>
+          (進捗: {currentProject.progressPercentage}%)
+        </span>
+      </div>
       
       <p>研究について何でも質問してください。写真や音声も送れます！</p>
       
