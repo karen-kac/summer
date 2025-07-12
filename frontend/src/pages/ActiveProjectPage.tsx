@@ -49,7 +49,7 @@ const ActiveProjectPage: React.FC<ActiveProjectPageProps> = ({
   const [showPhotoModal, setShowPhotoModal] = useState(false);
 
   // AppContextからユーザー情報を取得
-  const { authState } = useApp();
+  const { authState, loadUserRecords } = useApp();
 
   // AIが生成したステップをStepTemplateに変換
   const convertAIStepsToTemplate = (aiSteps: AIResearchStep[]): StepTemplate[] => {
@@ -542,14 +542,22 @@ const ActiveProjectPage: React.FC<ActiveProjectPageProps> = ({
         }))
       );
 
+      // 現地時間で日時を設定
+      const now = new Date();
+      const localDate = now.getFullYear() + '-' +
+                       String(now.getMonth() + 1).padStart(2, '0') + '-' +
+                       String(now.getDate()).padStart(2, '0');
+      const localTime = String(now.getHours()).padStart(2, '0') + ':' +
+                       String(now.getMinutes()).padStart(2, '0');
+
       const createRequest: CreateRecordRequest = {
         projectId: project.id,
         stepId: `step-${currentStepIndex + 1}`,
         recordType: recordFormData.recordType,
         title: recordFormData.title,
         content: recordFormData.content,
-        recordDate: new Date().toISOString().split('T')[0],
-        recordTime: new Date().toTimeString().split(' ')[0].slice(0, 5),
+        recordDate: localDate,
+        recordTime: localTime,
         data: {
           stepName: currentStep?.title || '',
           stepIndex: currentStepIndex,
@@ -570,6 +578,9 @@ const ActiveProjectPage: React.FC<ActiveProjectPageProps> = ({
 
       // 成功通知
       alert('記録が正常に保存されました！');
+
+      // 記録一覧を更新
+      loadUserRecords();
 
       // モーダルを閉じる
       handleCloseRecordModal();
@@ -609,14 +620,22 @@ const ActiveProjectPage: React.FC<ActiveProjectPageProps> = ({
         }))
       );
 
+      // 現地時間で日時を設定
+      const now = new Date();
+      const localDate = now.getFullYear() + '-' +
+                       String(now.getMonth() + 1).padStart(2, '0') + '-' +
+                       String(now.getDate()).padStart(2, '0');
+      const localTime = String(now.getHours()).padStart(2, '0') + ':' +
+                       String(now.getMinutes()).padStart(2, '0');
+
       const createRequest: CreateRecordRequest = {
         projectId: project.id,
         stepId: `step-${currentStepIndex + 1}`,
         recordType: 'photo',
         title: `写真記録 - ${currentStep?.title || 'ステップ記録'}`,
         content: `${selectedImages.length}枚の写真を追加しました。`,
-        recordDate: new Date().toISOString().split('T')[0],
-        recordTime: new Date().toTimeString().split(' ')[0].slice(0, 5),
+        recordDate: localDate,
+        recordTime: localTime,
         data: {
           stepName: currentStep?.title || '',
           stepIndex: currentStepIndex,
@@ -636,7 +655,10 @@ const ActiveProjectPage: React.FC<ActiveProjectPageProps> = ({
       console.log('✅ 写真記録作成成功:', response);
 
       // 成功通知
-      // alert('写真が正常に保存されました！');
+      alert('写真が正常に保存されました！');
+
+      // 記録一覧を更新
+      loadUserRecords();
 
       // モーダルを閉じる
       handleClosePhotoModal();

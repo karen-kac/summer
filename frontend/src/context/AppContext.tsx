@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { UserProfile, ResearchTheme, ResearchProject, AuthState, LoginRequest, SignupRequest, User, Grade, Interest, Personality, Strength, Duration, Record, Schedule } from '../types';
-import { themeApi, userApi, ApiError } from '../services/api';
+import { themeApi, userApi, recordApi, ApiError, CreateRecordResponse } from '../services/api';
 
 // ヘルパー関数: 研究ジャンルに応じたステップ数を返す
 const getStepCount = (genre: string): number => {
@@ -66,6 +66,7 @@ interface AppContextType {
   generateTasksForProject: (project: ResearchProject, stepIndex: number) => Array<{ icon: string; task: string; urgent: boolean }>;
   addRecord: (record: Partial<Record>) => void;
   updateRecord: (recordId: string, updates: Partial<Record>) => void;
+  loadUserRecords: () => Promise<void>;
   generateThemesFromAPI: (profile: UserProfile, useAI?: boolean) => Promise<void>;
   loadSavedThemes: () => Promise<void>;
   loadDashboardData: () => Promise<void>;
@@ -261,6 +262,72 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     ];
   }, []);
 
+  // 記録データを読み込む関数
+  const loadUserRecords = useCallback(async (): Promise<void> => {
+    if (!authState.user?.id) return;
+
+    try {
+      console.log('📚 ユーザーの記録を読み込み中...');
+      const response = await recordApi.getRecordsByUser(authState.user.id, 50); // 最新50件を取得
+
+      // デバッグ用：APIレスポンスの構造を詳しく確認
+      console.log('🔍 記録APIレスポンス詳細:', {
+        recordsCount: response.records.length,
+        firstRecord: response.records[0],
+        firstRecordMedia: response.records[0]?.media,
+        hasMore: response.hasMore
+      });
+
+      // APIレスポンスをRecord[]形式に変換
+      const transformedRecords: Record[] = response.records.map((apiRecord: CreateRecordResponse, index) => {
+        // 各記録の画像データを詳しくログ出力
+        if (apiRecord.media && apiRecord.media.length > 0) {
+          console.log(`📷 記録${index + 1}の画像データ:`, {
+            recordTitle: apiRecord.record.title,
+            mediaCount: apiRecord.media.length,
+            mediaData: apiRecord.media.map((media, i) => ({
+              filename: media.filename,
+              contentType: media.contentType,
+              size: media.size,
+              hasBase64: !!media.base64Data,
+              base64Length: media.base64Data?.length || 0
+            }))
+          });
+        }
+
+        return {
+          id: apiRecord.record.recordId,
+          projectId: apiRecord.record.projectId,
+          stepId: apiRecord.record.stepId,
+          recordType: apiRecord.record.recordType as 'experiment' | 'observation' | 'photo' | 'note' | 'data',
+          title: apiRecord.record.title,
+          content: apiRecord.record.content,
+          data: {
+            ...apiRecord.record.data,
+            images: apiRecord.media || [] // メディアデータを追加
+          },
+          recordDate: apiRecord.record.recordDate + 'T' + (apiRecord.record.recordTime || '00:00:00'),
+          tags: apiRecord.record.tags || [],
+          weatherInfo: apiRecord.record.weatherInfo,
+          locationInfo: apiRecord.record.locationInfo,
+          createdAt: apiRecord.record.createdAt,
+          updatedAt: apiRecord.record.updatedAt
+        };
+      });
+
+      setRecords(transformedRecords);
+      console.log(`✅ ${transformedRecords.length}件の記録を読み込みました`);
+
+      // 画像がある記録の数を確認
+      const recordsWithImages = transformedRecords.filter(r => r.data?.images && r.data.images.length > 0);
+      console.log(`📷 画像付き記録: ${recordsWithImages.length}件`);
+
+    } catch (error) {
+      console.error('❌ 記録読み込みエラー:', error);
+      // エラーの場合は既存の記録をそのまま維持
+    }
+  }, [authState.user?.id]);
+
   // ダッシュボードデータを読み込む関数
   const loadDashboardData = useCallback(async (): Promise<void> => {
     if (!authState.user?.id) return;
@@ -362,8 +429,9 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
 
     if (authState.isAuthenticated && authState.user?.id) {
       loadDashboardData();
+      loadUserRecords();
     }
-  }, [authState.isAuthenticated, authState.user?.id, loadDashboardData]);
+  }, [authState.isAuthenticated, authState.user?.id, loadDashboardData, loadUserRecords]);
 
   // 認証関連のハンドラー
   const handleLogin = async (credentials: LoginRequest): Promise<void> => {
@@ -808,6 +876,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     generateTasksForProject,
     addRecord,
     updateRecord,
+    loadUserRecords,
     generateThemesFromAPI,
     loadSavedThemes,
     loadDashboardData
