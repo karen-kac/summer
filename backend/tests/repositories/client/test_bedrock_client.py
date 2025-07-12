@@ -22,7 +22,7 @@ def cleanup_env_vars():
 def test_bedrock_client_init_with_credentials():
     os.environ["AWS_ACCESS_KEY_ID"] = "test_access_key"
     os.environ["AWS_SECRET_ACCESS_KEY"] = "test_secret_key"
-    os.environ["AWS_REGION"] = "us-east-1"
+    os.environ["BEDROCK_REGION"] = "us-east-1"
     
     with patch('boto3.client') as mock_boto3:
         client = BedrockClient()
@@ -39,7 +39,7 @@ def test_bedrock_client_init_without_credentials():
 async def test_generate_content_success():
     os.environ["AWS_ACCESS_KEY_ID"] = "test_access_key"
     os.environ["AWS_SECRET_ACCESS_KEY"] = "test_secret_key"
-    os.environ["AWS_REGION"] = "us-east-1"
+    os.environ["BEDROCK_REGION"] = "us-east-1"
     
     mock_response = {
         "body": MagicMock()
@@ -62,7 +62,7 @@ async def test_generate_content_success():
 async def test_generate_content_exception():
     os.environ["AWS_ACCESS_KEY_ID"] = "test_access_key"
     os.environ["AWS_SECRET_ACCESS_KEY"] = "test_secret_key"
-    os.environ["AWS_REGION"] = "us-east-1"
+    os.environ["BEDROCK_REGION"] = "us-east-1"
     
     with patch('boto3.client') as mock_boto3:
         mock_client = MagicMock()
@@ -80,7 +80,7 @@ async def test_generate_content_exception():
 async def test_post_prompt_valid_json():
     os.environ["AWS_ACCESS_KEY_ID"] = "test_access_key"
     os.environ["AWS_SECRET_ACCESS_KEY"] = "test_secret_key"
-    os.environ["AWS_REGION"] = "us-east-1"
+    os.environ["BEDROCK_REGION"] = "us-east-1"
     
     with patch('boto3.client') as mock_boto3:
         mock_client = MagicMock()
@@ -100,7 +100,7 @@ async def test_post_prompt_valid_json():
 async def test_post_prompt_invalid_json_format():
     os.environ["AWS_ACCESS_KEY_ID"] = "test_access_key"
     os.environ["AWS_SECRET_ACCESS_KEY"] = "test_secret_key"
-    os.environ["AWS_REGION"] = "us-east-1"
+    os.environ["BEDROCK_REGION"] = "us-east-1"
     
     with patch('boto3.client') as mock_boto3:
         mock_client = MagicMock()

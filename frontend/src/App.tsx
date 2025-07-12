@@ -21,6 +21,7 @@ import ThemeResultsPage from './pages/ThemeResultsPage';
 import SelectedThemePage from './pages/SelectedThemePage';
 import ActiveProjectPage from './pages/ActiveProjectPage';
 import RecordCalendarPage from './pages/RecordCalendarPage';
+import { ChatPage } from './pages/ChatPage';
 
 import type { Record, UserProfile, ResearchProject, ResearchTheme, UserStats, Achievement } from './types';
 import './styles/Common.css';
@@ -131,8 +132,7 @@ const DashboardPageWrapper: React.FC = () => {
   };
 
   const handleOpenAITutor = () => {
-    console.log('Open AI tutor');
-    // TODO: AIチューター画面に遷移
+    navigate('/chat');
   };
 
   const handleViewRecords = () => {
@@ -294,6 +294,10 @@ const ActiveProjectPageWrapper: React.FC = () => {
     navigate('/dashboard');
   };
 
+  const handleOpenChat = () => {
+    navigate('/chat');
+  };
+
   if (!selectedProject) {
     return <div>プロジェクトが見つかりません</div>;
   }
@@ -303,8 +307,19 @@ const ActiveProjectPageWrapper: React.FC = () => {
       project={selectedProject}
       onBack={handleBack}
       onUpdateProgress={handleUpdateProjectProgress}
+      onOpenChat={handleOpenChat}
     />
   );
+};
+
+const ChatPageWrapper: React.FC = () => {
+  const navigate = useNavigate();
+
+  const handleBack = () => {
+    navigate('/dashboard');
+  };
+
+  return <ChatPage />;
 };
 
 const RecordCalendarPageWrapper: React.FC = () => {
@@ -411,6 +426,10 @@ const router = createBrowserRouter([
       {
         path: 'records',
         element: <RecordCalendarPageWrapper />,
+      },
+      {
+        path: 'chat',
+        element: <ChatPageWrapper />,
       },
     ],
   },
