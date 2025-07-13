@@ -19,6 +19,9 @@ interface DashboardPageProps {
     level: number;
     completedProjects: number;
     currentStreak: number;
+    totalRecords: number;
+    totalPhotos: number;
+    totalExperiments: number;
   };
   recentAchievements: Achievement[];
   todaysTasks: TaskItem[];
@@ -141,14 +144,47 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
           )}
         </div>
       </div>
-      {/* 下段：2つ横並び */}
+      {/* 下段：3つ横並び */}
       <div className="dashboard-row">
+        <div className="card stats-card">
+          <div className="card-title">📊 統計情報</div>
+          <div className="stats-grid">
+            <div className="stat-item">
+              <span className="stat-icon">🌟</span>
+              <div className="stat-content">
+                <div className="stat-value">{userStats.totalPoints}</div>
+                <div className="stat-label">ポイント</div>
+              </div>
+            </div>
+            <div className="stat-item">
+              <span className="stat-icon">{getLevelEmoji(userStats.level)}</span>
+              <div className="stat-content">
+                <div className="stat-value">{userStats.level}</div>
+                <div className="stat-label">レベル</div>
+              </div>
+            </div>
+            <div className="stat-item">
+              <span className="stat-icon">📝</span>
+              <div className="stat-content">
+                <div className="stat-value">{userStats.totalRecords}</div>
+                <div className="stat-label">記録数</div>
+              </div>
+            </div>
+            <div className="stat-item">
+              <span className="stat-icon">📷</span>
+              <div className="stat-content">
+                <div className="stat-value">{userStats.totalPhotos}</div>
+                <div className="stat-label">写真数</div>
+              </div>
+            </div>
+          </div>
+        </div>
         <div className="card achievements-card">
           <div className="card-title">🏆 最近の実績</div>
           {recentAchievements.length === 0 ? (
             <div>まだ実績はありません</div>
           ) : (
-            recentAchievements.slice(0, 3).map((ach) => (
+            recentAchievements.slice(0, 2).map((ach) => (
               <div key={ach.id} className="achievement-item">
                 <span className="achievement-icon">{ach.icon}</span>
                 <span className="achievement-name">{ach.name}</span>
@@ -181,7 +217,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
       <div className="quick-actions-row">
         <button className="quick-action-btn" onClick={onOpenAITutor}>
           <span className="qa-icon">🤖</span>
-          <span className="qa-label">AI先生</span>
+          <span className="qa-label">使い方</span>
         </button>
         <button className="quick-action-btn" onClick={onViewRecords}>
           <span className="qa-icon">📝</span>

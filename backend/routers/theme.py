@@ -1,15 +1,14 @@
 from fastapi import APIRouter, HTTPException
 from models.theme import UserProfile, ResearchTheme, ThemeListResponse, SaveThemeRequest, SaveThemeResponse, GeneratePlanRequest, GeneratePlanResponse, GetSavedThemeResponse, GetResearchPlanResponse
 from services.theme_service import ThemeService
-from repositories import ThemeRepository, BedrockClient
-from utils import PromptBuilder
+from repositories import get_theme_repository
+from repositories.repository_factory import get_repository_factory
+from datetime import datetime
 
 router = APIRouter()
 
-# 実際のBedrock APIを使用するサービス
-prompt_builder = PromptBuilder()
-bedrock_client = BedrockClient()
-theme_repository = ThemeRepository(prompt_builder, bedrock_client)
+# ファクトリーパターンを使用してサービスを取得
+theme_repository = get_theme_repository()
 theme_service = ThemeService(theme_repository)
 
 
@@ -23,11 +22,31 @@ async def generate_theme(profile: UserProfile):
 
 
 @router.post("/save", response_model=SaveThemeResponse)
-async def save_theme(request: SaveThemeRequest):
+async def save_theme(request: SaveThemeRequest, user_id: str = None):
     """
     選択されたテーマを保存する
     """
     response = await theme_service.save_theme(request)
+
+    # ユーザーIDが提供されている場合、ユーザーとテーマの関連付けを保存
+    if response.success and user_id:
+        try:
+            factory = get_repository_factory()
+            project_repo = factory.get_project_repository()
+
+            # ユーザーの保存テーマとして記録
+            await project_repo.save_theme(
+                user_id=user_id,
+                theme_id=response.saved_theme_id,
+                notes=f"テーマ決定日: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+            )
+
+            response.message += " (ユーザーとの関連付けも保存済み)"
+
+        except Exception as e:
+            # エラーが発生してもテーマ保存は成功しているので、警告メッセージを追加
+            response.message += f" (警告: ユーザーとの関連付け保存に失敗: {str(e)})"
+
     return response
 
 

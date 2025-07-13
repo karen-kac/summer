@@ -95,17 +95,23 @@ class PromptBuilder:
             f"3. 期間（{duration}）内で完了できるテーマにしてください\n"
             f"4. 子供の得意分野（{', '.join(strengths)}）を活かせるテーマにしてください\n"
             f"5. 実験・観察・調査のいずれかのジャンルで多様性を持たせてください\n\n"
+            f"**重要：genre値について**\n"
+            f"genreフィールドには必ず以下の値のいずれかを使用してください：\n"
+            f"- \"experiment\": 実験を行うテーマ（何かを作る、試す、検証する）\n"
+            f"- \"observation\": 観察するテーマ（自然や現象を観察・記録する）\n"
+            f"- \"research\": 調査するテーマ（文献調査、アンケート、データ収集）\n"
+            f"これ以外の値は使用しないでください。\n\n"
             f"以下のJSON形式で必ず回答してください。```json ``` で囲んでください：\n\n"
             f"""```json
 [
   {{
     "title": "具体的で魅力的なテーマタイトル",
     "description": "テーマの詳しい説明（何を調べるか、どんな発見が期待できるか）",
-    "genre": "experiment", // "experiment", "observation", "research"のいずれか
+    "genre": "experiment",
     "materials": ["必要な材料1", "材料2", "材料3"],
     "steps": ["手順1", "手順2", "手順3", "手順4", "手順5"],
-    "estimatedDays": 7, // 推定日数（数値）
-    "difficulty": "medium" // "easy", "medium", "hard"のいずれか
+    "estimatedDays": 7,
+    "difficulty": "medium"
   }},
   {{
     "title": "2つ目のテーマタイトル",

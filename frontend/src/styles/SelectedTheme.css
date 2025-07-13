@@ -103,6 +103,37 @@
   font-size: 1.1rem;
 }
 
+/* 警告通知エリア */
+.warning-notice {
+  margin: 20px 0 30px 0;
+  padding: 20px 25px;
+  background: linear-gradient(135deg, #FFF3E0 0%, #FFE0B2 100%);
+  border: 2px solid #FF9800;
+  border-radius: 15px;
+  box-shadow: 0 4px 15px rgba(255, 152, 0, 0.2);
+}
+
+.warning-notice h3 {
+  font-size: 1.3rem;
+  color: #E65100;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.warning-notice p {
+  color: #BF360C;
+  line-height: 1.6;
+  font-size: 1.05rem;
+  margin: 0;
+}
+
+.warning-notice strong {
+  color: #D84315;
+  font-weight: 700;
+}
+
 .selected-actions {
   display: flex;
   gap: 20px;

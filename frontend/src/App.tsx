@@ -21,6 +21,7 @@ import ThemeResultsPage from './pages/ThemeResultsPage';
 import SelectedThemePage from './pages/SelectedThemePage';
 import ActiveProjectPage from './pages/ActiveProjectPage';
 import RecordCalendarPage from './pages/RecordCalendarPage';
+import HelpPage from './pages/HelpPage';
 
 import type { Record, UserProfile, ResearchProject, ResearchTheme, UserStats, Achievement } from './types';
 import './styles/Common.css';
@@ -109,6 +110,8 @@ const DashboardPageWrapper: React.FC = () => {
     userProfile,
     activeProjects,
     pastProjects,
+    userStats,
+    recentAchievements,
     todaysTasks,
     savedThemes,
     savedThemesLoading,
@@ -116,12 +119,46 @@ const DashboardPageWrapper: React.FC = () => {
     setSelectedTheme
   } = useApp();
 
+  // デバッグログ追加
+  console.log('📊 DashboardPageWrapper状態:', {
+    activeProjectsCount: activeProjects.length,
+    activeProjects: activeProjects.map(p => ({
+      id: p.id,
+      title: p.title,
+      currentStepIndex: p.currentStepIndex,
+      progressPercentage: p.progressPercentage
+    }))
+  });
+
   const handleStartNewResearch = () => {
     navigate('/selector');
   };
 
   const handleContinueProject = (project: any) => {
+    console.log('🎯 プロジェクト続行クリック:', project);
+    console.log('🎯 プロジェクトの詳細:', {
+      全体: project,
+      type: typeof project,
+      keys: Object.keys(project),
+      id: project.id,
+      id_type: typeof project.id,
+      PK: project.PK,
+      projectId: project.projectId,
+      title: project.title,
+      currentStepIndex: project.currentStepIndex,
+      progressPercentage: project.progressPercentage
+    });
+
+    // IDの検証
+    if (!project.id || project.id === 'undefined') {
+      console.error('❌ 無効なプロジェクトID:', project.id);
+      console.error('プロジェクトデータ:', project);
+      alert('プロジェクトIDが無効です。ページを再読み込みしてください。');
+      return;
+    }
+
     setSelectedProject(project);
+    console.log('🚀 ナビゲート先:', `/project/${project.id}`);
     navigate(`/project/${project.id}`);
   };
 
@@ -131,8 +168,7 @@ const DashboardPageWrapper: React.FC = () => {
   };
 
   const handleOpenAITutor = () => {
-    console.log('Open AI tutor');
-    // TODO: AIチューター画面に遷移
+    navigate('/help');
   };
 
   const handleViewRecords = () => {
@@ -155,8 +191,8 @@ const DashboardPageWrapper: React.FC = () => {
       userProfile={userProfile}
       activeProjects={activeProjects}
       pastProjects={pastProjects}
-      userStats={defaultUserStats}
-      recentAchievements={defaultRecentAchievements}
+      userStats={userStats}
+      recentAchievements={recentAchievements}
       todaysTasks={todaysTasks}
       savedThemes={savedThemes}
       savedThemesLoading={savedThemesLoading}
@@ -279,28 +315,59 @@ const ActiveProjectPageWrapper: React.FC = () => {
     handleUpdateProjectProgress
   } = useApp();
 
+  // デバッグログを追加
+  console.log('🔍 ActiveProjectPageWrapper状態:', {
+    paramsId: params.id,
+    activeProjectsCount: activeProjects.length,
+    activeProjectIds: activeProjects.map(p => p.id),
+    selectedProject: selectedProject?.id
+  });
+
   // URLからプロジェクトIDを取得してプロジェクトを設定
   useEffect(() => {
-    if (params.id && !selectedProject) {
+    if (params.id) {
       const project = activeProjects.find(p => p.id === params.id);
       if (project) {
+        console.log('🔄 プロジェクトを設定中:', {
+          projectId: project.id,
+          title: project.title,
+          currentStepIndex: project.currentStepIndex,
+          progressPercentage: project.progressPercentage
+        });
         setSelectedProject(project);
+      } else {
+        console.warn('⚠️ プロジェクトが見つかりません:', {
+          searchingForId: params.id,
+          availableProjects: activeProjects.map(p => ({ id: p.id, title: p.title }))
+        });
       }
     }
-  }, [params.id, selectedProject, activeProjects, setSelectedProject]);
+  }, [params.id, activeProjects, setSelectedProject]);
 
   const handleBack = () => {
     setSelectedProject(null);
     navigate('/dashboard');
   };
 
-  if (!selectedProject) {
-    return <div>プロジェクトが見つかりません</div>;
+  // selectedProjectがある場合はそれを使用、なければactiveProjectsから検索
+  const currentProject = selectedProject || (params.id ? activeProjects.find(p => p.id === params.id) : null);
+
+  if (!currentProject) {
+    return (
+      <div className="page-container">
+        <div className="error-container">
+          <h2>プロジェクトが見つかりません</h2>
+          <p>プロジェクトID: {params.id}</p>
+          <p>利用可能なプロジェクト数: {activeProjects.length}</p>
+          <button onClick={handleBack}>ダッシュボードに戻る</button>
+        </div>
+      </div>
+    );
   }
 
   return (
     <ActiveProjectPage
-      project={selectedProject}
+      project={currentProject}
       onBack={handleBack}
       onUpdateProgress={handleUpdateProjectProgress}
     />
@@ -309,22 +376,40 @@ const ActiveProjectPageWrapper: React.FC = () => {
 
 const RecordCalendarPageWrapper: React.FC = () => {
   const navigate = useNavigate();
-  const { activeProjects, records, schedules, addRecord } = useApp();
+  const { activeProjects, records, schedules, addRecord, loadUserRecords } = useApp();
+
+  // 記録データの変更を監視
+  useEffect(() => {
+    console.log('📅 RecordCalendarPageWrapper - 記録データが更新されました:', {
+      recordsCount: records.length,
+      timestamp: new Date().toLocaleTimeString()
+    });
+  }, [records]);
 
   const handleBack = () => {
     navigate('/dashboard');
   };
 
-  const handleAddRecord = (record: Partial<Record>) => {
-    // AppContextの addRecord メソッドを使用して記録を追加
-    addRecord(record);
+  const handleAddRecord = async (record: Partial<Record>) => {
+    try {
+      // AppContextの addRecord メソッドを使用して記録を追加
+      addRecord(record);
 
-    // 成功メッセージを表示（将来的にはtoast通知などで置き換え）
-    console.log('記録が正常に追加されました:', {
-      title: record.title,
-      type: record.recordType,
-      date: new Date(record.recordDate || '').toLocaleDateString('ja-JP')
-    });
+      // 記録追加後に記録一覧を再読み込み
+      await loadUserRecords();
+
+      // 成功メッセージを表示
+      console.log('✅ 記録が正常に追加されました:', {
+        title: record.title,
+        type: record.recordType,
+        date: new Date(record.recordDate || '').toLocaleDateString('ja-JP')
+      });
+
+      alert('記録が正常に追加されました！');
+    } catch (error) {
+      console.error('❌ 記録追加エラー:', error);
+      alert('記録の追加に失敗しました。もう一度お試しください。');
+    }
   };
 
   const handleViewRecord = (record: Record) => {
@@ -348,7 +433,7 @@ const RecordCalendarPageWrapper: React.FC = () => {
       data: record.data
     };
 
-    console.log('記録詳細:', recordDetails);
+    console.log('📋 記録詳細:', recordDetails);
 
     // 将来的にはここで詳細表示モーダルを開く
     // 例: setSelectedRecord(record); setShowRecordDetailModal(true);
@@ -362,6 +447,20 @@ const RecordCalendarPageWrapper: React.FC = () => {
       onBack={handleBack}
       onAddRecord={handleAddRecord}
       onViewRecord={handleViewRecord}
+    />
+  );
+};
+
+const HelpPageWrapper: React.FC = () => {
+  const navigate = useNavigate();
+
+  const handleBack = () => {
+    navigate('/dashboard');
+  };
+
+  return (
+    <HelpPage
+      onBack={handleBack}
     />
   );
 };
@@ -411,6 +510,10 @@ const router = createBrowserRouter([
       {
         path: 'records',
         element: <RecordCalendarPageWrapper />,
+      },
+      {
+        path: 'help',
+        element: <HelpPageWrapper />,
       },
     ],
   },

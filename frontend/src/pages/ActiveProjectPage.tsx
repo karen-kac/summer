@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { ResearchProject, ResearchStep, Genre, AIResearchStep } from '../types';
-import { themeApi } from '../services/api';
+import { ResearchProject, ResearchStep, Genre, AIResearchStep, CreateRecordRequest } from '../types';
+import { themeApi, recordApi } from '../services/api';
+import { useApp } from '../context/AppContext';
 import '../styles/Common.css';
 import '../styles/Components.css';
 import '../styles/ActiveProject.css';
+import { useNavigate } from 'react-router-dom';
 
 interface ActiveProjectPageProps {
   project: ResearchProject;
@@ -23,12 +25,33 @@ const ActiveProjectPage: React.FC<ActiveProjectPageProps> = ({
   onBack,
   onUpdateProgress
 }) => {
+  const navigate = useNavigate();
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [projectSteps, setProjectSteps] = useState<StepTemplate[]>([]);
   const [isLoadingPlan, setIsLoadingPlan] = useState(false);
   const [planError, setPlanError] = useState<string | null>(null);
   const [isUsingAIPlan, setIsUsingAIPlan] = useState(false);
   const [planStatus, setPlanStatus] = useState<'cached' | 'generated' | 'default' | null>(null);
+
+  // 記録フォーム関連の状態
+  const [showRecordModal, setShowRecordModal] = useState(false);
+  const [isCreatingRecord, setIsCreatingRecord] = useState(false);
+  const [recordFormData, setRecordFormData] = useState({
+    title: '',
+    content: '',
+    recordType: 'note' as const,
+    tags: [] as string[],
+    weatherInfo: null as any,
+    locationInfo: null as any
+  });
+
+  // 写真アップロード関連の状態
+  const [selectedImages, setSelectedImages] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [showPhotoModal, setShowPhotoModal] = useState(false);
+
+  // AppContextからユーザー情報を取得
+  const { authState, loadUserRecords, loadDashboardData } = useApp();
 
   // AIが生成したステップをStepTemplateに変換
   const convertAIStepsToTemplate = (aiSteps: AIResearchStep[]): StepTemplate[] => {
@@ -255,73 +278,499 @@ const ActiveProjectPage: React.FC<ActiveProjectPageProps> = ({
     setIsLoadingPlan(true);
     setPlanError(null);
 
-    try {
-      // まず既存の研究計画を取得を試行
-      const existingPlanResponse = await themeApi.getResearchPlan(themeId);
+    console.log('🔄 研究計画を読み込み中...', {
+      themeId,
+      projectTitle: project.title,
+      projectGenre: project.genre
+    });
 
-      if (existingPlanResponse.success && existingPlanResponse.plan) {
-        const aiSteps = convertAIStepsToTemplate(existingPlanResponse.plan.steps);
-        setProjectSteps(aiSteps);
-        setIsUsingAIPlan(true);
-        setPlanStatus('cached');
-        return;
-      }
-
-      // 既存の研究計画がない場合、新しく生成
-      const generateResponse = await themeApi.generateResearchPlan(themeId);
-
-      if (generateResponse.success && generateResponse.plan) {
-        const aiSteps = convertAIStepsToTemplate(generateResponse.plan.steps);
-        setProjectSteps(aiSteps);
-        setIsUsingAIPlan(true);
-        setPlanStatus('generated');
-      } else {
-        const defaultSteps = getDefaultStepTemplates(project.genre || 'experiment');
-        setProjectSteps(defaultSteps);
-        setIsUsingAIPlan(false);
-        setPlanStatus('default');
-      }
-    } catch (error) {
-      setPlanError('研究計画の取得に失敗しました。デフォルトプランを使用します。');
+    // テーマIDの有効性を厳密にチェック
+    if (!themeId ||
+        themeId === '' ||
+        themeId === 'undefined' ||
+        themeId.startsWith('project-')) {
+      console.warn('⚠️ 無効なテーマIDが検出されました。デフォルトプランを使用します:', themeId);
       const defaultSteps = getDefaultStepTemplates(project.genre || 'experiment');
       setProjectSteps(defaultSteps);
       setIsUsingAIPlan(false);
       setPlanStatus('default');
+      setPlanError('無効なテーマIDのため、デフォルトプランを使用しています。');
+      setIsLoadingPlan(false);
+      return;
+    }
+
+    try {
+      // generate_research_plan を直接呼び出す
+      // このAPIは既存の研究計画があるかチェックして、ない場合は新規生成する
+      const response = await themeApi.generateResearchPlan(themeId);
+
+      console.log('📊 研究計画API応答:', response);
+
+      if (response.success && response.plan) {
+        const aiSteps = convertAIStepsToTemplate(response.plan.steps);
+        setProjectSteps(aiSteps);
+        setIsUsingAIPlan(true);
+
+        // メッセージから生成されたか既存だったかを判定
+        if (response.message.includes('保存された研究計画')) {
+          setPlanStatus('cached');
+        } else {
+          setPlanStatus('generated');
+        }
+
+        console.log(`✅ 研究計画を読み込みました: ${response.plan.theme_title}`);
+      } else {
+        console.warn('⚠️ AI研究計画の取得に失敗、デフォルトプランを使用します');
+        console.warn('エラー詳細:', response.message);
+
+        const defaultSteps = getDefaultStepTemplates(project.genre || 'experiment');
+        setProjectSteps(defaultSteps);
+        setIsUsingAIPlan(false);
+        setPlanStatus('default');
+        setPlanError('テーマが見つからないため、デフォルトプランを使用しています。');
+      }
+    } catch (error) {
+      console.error('❌ 研究計画の取得でエラーが発生しました:', error);
+      const defaultSteps = getDefaultStepTemplates(project.genre || 'experiment');
+      setProjectSteps(defaultSteps);
+      setIsUsingAIPlan(false);
+      setPlanStatus('default');
+      setPlanError('ネットワークエラーのため、デフォルトプランを使用しています。');
     } finally {
       setIsLoadingPlan(false);
     }
   };
 
   useEffect(() => {
+    console.log('🔍 ActiveProjectPageにプロジェクトデータが渡されました:', {
+      id: project.id,
+      title: project.title,
+      themeId: project.themeId,
+      currentStepIndex: project.currentStepIndex,
+      progressPercentage: project.progressPercentage,
+      genre: project.genre,
+      status: project.status,
+      updatedAt: project.updatedAt
+    });
+
     // プロジェクトにthemeIdがある場合、研究計画を取得
-    if (project.themeId) {
+    if (project.themeId && project.themeId !== '' && project.themeId !== 'undefined') {
+      console.log('✅ 有効なテーマIDが見つかりました:', project.themeId);
       loadResearchPlan(project.themeId);
     } else {
+      console.warn('⚠️ 無効なテーマIDです。デフォルトプランを使用します。', {
+        themeId: project.themeId,
+        projectTitle: project.title
+      });
       const defaultSteps = getDefaultStepTemplates(project.genre || 'experiment');
       setProjectSteps(defaultSteps);
       setIsUsingAIPlan(false);
       setPlanStatus('default');
+      setPlanError('プロジェクトにテーマIDが設定されていないため、デフォルトプランを使用しています。');
     }
   }, [project]);
 
   useEffect(() => {
     if (projectSteps.length > 0) {
-      // プロジェクトの進捗から現在のステップを計算
-      const progressIndex = Math.floor((project.progressPercentage / 100) * projectSteps.length);
-      setCurrentStepIndex(Math.min(progressIndex, projectSteps.length - 1));
+      // 保存されたcurrentStepIndexを優先的に使用
+      if (project.currentStepIndex !== undefined && project.currentStepIndex >= 0) {
+        const newStepIndex = Math.min(project.currentStepIndex, projectSteps.length - 1);
+        console.log('📍 保存されたステップインデックスを使用:', newStepIndex);
+        setCurrentStepIndex(newStepIndex);
+      } else {
+        // fallback: プロジェクトの進捗から現在のステップを計算
+        const progressIndex = Math.floor((project.progressPercentage / 100) * projectSteps.length);
+        const newStepIndex = Math.min(progressIndex, projectSteps.length - 1);
+        console.log('📍 進捗からステップインデックスを計算:', newStepIndex);
+        setCurrentStepIndex(newStepIndex);
+      }
     }
-  }, [project.progressPercentage, projectSteps]);
+  }, [project.currentStepIndex, project.progressPercentage, projectSteps, project.id]);
 
   const handleStepComplete = () => {
+    console.log('🚀 ステップ完了ボタンがクリックされました:', {
+      projectId: project.id,
+      currentStepIndex,
+      totalSteps: projectSteps.length,
+      isLastStep: currentStepIndex >= projectSteps.length - 1
+    });
+
     if (currentStepIndex < projectSteps.length - 1) {
       const newStepIndex = currentStepIndex + 1;
+      console.log('➡️ 次のステップに進みます:', {
+        from: currentStepIndex,
+        to: newStepIndex
+      });
       setCurrentStepIndex(newStepIndex);
+      onUpdateProgress(project.id, newStepIndex);
+    } else {
+      // 最後のステップの場合、プロジェクトを完了状態にする
+      console.log('🏁 最後のステップです。プロジェクトを完了させます');
+      const newStepIndex = currentStepIndex;
       onUpdateProgress(project.id, newStepIndex);
     }
   };
 
   const handleStepSelect = (stepIndex: number) => {
     setCurrentStepIndex(stepIndex);
+  };
+
+  // 写真選択の処理
+  const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    const imageFiles = files.filter(file => file.type.startsWith('image/'));
+
+    if (imageFiles.length !== files.length) {
+      alert('画像ファイルのみアップロードできます。');
+      return;
+    }
+
+    // ファイルサイズ制限（2MB）
+    const maxSizeBytes = 2 * 1024 * 1024; // 2MB
+    const oversizedFiles = imageFiles.filter(file => file.size > maxSizeBytes);
+    if (oversizedFiles.length > 0) {
+      const oversizedInfo = oversizedFiles.map(f =>
+        `${f.name}: ${Math.round(f.size / 1024 / 1024 * 100) / 100}MB`
+      ).join('\n');
+      alert(`ファイルサイズは2MB以下にしてください。\n\n以下のファイルが大きすぎます:\n${oversizedInfo}`);
+      return;
+    }
+
+    // 詳細ログ
+    console.log('📷 画像選択:', {
+      selectedCount: imageFiles.length,
+      files: imageFiles.map(f => ({
+        name: f.name,
+        type: f.type,
+        sizeKB: Math.round(f.size / 1024),
+        sizeMB: Math.round(f.size / 1024 / 1024 * 100) / 100
+      }))
+    });
+
+    setSelectedImages(prev => [...prev, ...imageFiles]);
+
+    // プレビュー画像を生成
+    imageFiles.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        if (e.target?.result) {
+          setImagePreviews(prev => [...prev, e.target!.result as string]);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  // 画像を削除
+  const handleRemoveImage = (index: number) => {
+    setSelectedImages(prev => prev.filter((_, i) => i !== index));
+    setImagePreviews(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // 画像をリセット
+  const resetImages = () => {
+    setSelectedImages([]);
+    setImagePreviews([]);
+  };
+
+  // 記録モーダルを開く
+  const handleOpenRecordModal = () => {
+    // フォームをリセット
+    setRecordFormData({
+      title: '',
+      content: '',
+      recordType: 'note',
+      tags: [],
+      weatherInfo: null,
+      locationInfo: null
+    });
+    resetImages();
+    setShowRecordModal(true);
+  };
+
+  // 写真モーダルを開く
+  const handleOpenPhotoModal = () => {
+    resetImages();
+    setShowPhotoModal(true);
+  };
+
+  // 記録モーダルを閉じる
+  const handleCloseRecordModal = () => {
+    setShowRecordModal(false);
+    resetImages();
+  };
+
+  // 写真モーダルを閉じる
+  const handleClosePhotoModal = () => {
+    setShowPhotoModal(false);
+    resetImages();
+  };
+
+  // 記録フォームデータの更新
+  const handleRecordFormChange = (field: string, value: any) => {
+    setRecordFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  // 画像をBase64に変換する関数（サイズ制限付き）
+  const convertImageToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      // ファイルサイズチェック（2MB制限）
+      const maxSizeBytes = 2 * 1024 * 1024; // 2MB
+      if (file.size > maxSizeBytes) {
+        reject(new Error(`ファイルサイズが大きすぎます。最大2MBまでです。現在のサイズ: ${Math.round(file.size / 1024 / 1024 * 100) / 100}MB`));
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (reader.result) {
+          // data:image/jpeg;base64, の部分を除去してBase64文字列だけを取得
+          const base64 = (reader.result as string).split(',')[1];
+
+          // Base64サイズもチェック
+          const base64SizeKB = Math.round(base64.length / 1024);
+          console.log('📷 Base64変換完了:', {
+            filename: file.name,
+            originalSizeKB: Math.round(file.size / 1024),
+            base64SizeKB: base64SizeKB,
+            base64Length: base64.length
+          });
+
+          resolve(base64);
+        } else {
+          reject(new Error('ファイルの読み込みに失敗しました'));
+        }
+      };
+      reader.onerror = () => reject(new Error('ファイルの読み込みエラー'));
+      reader.readAsDataURL(file);
+    });
+  };
+
+  // 記録を作成
+  const handleCreateRecord = async () => {
+    if (!authState.user?.id) {
+      alert('ユーザーが認証されていません。再度ログインしてください。');
+      return;
+    }
+
+    if (!recordFormData.title.trim() || !recordFormData.content.trim()) {
+      alert('タイトルと内容を入力してください。');
+      return;
+    }
+
+    setIsCreatingRecord(true);
+
+    try {
+      const currentStep = projectSteps[currentStepIndex];
+
+      // 画像をBase64に変換
+      const imageData = await Promise.all(
+        selectedImages.map(async (file, index) => ({
+          filename: file.name,
+          contentType: file.type,
+          size: file.size,
+          base64Data: await convertImageToBase64(file)
+        }))
+      );
+
+      // 現地時間で日時を設定
+      const now = new Date();
+      const localDate = now.getFullYear() + '-' +
+                       String(now.getMonth() + 1).padStart(2, '0') + '-' +
+                       String(now.getDate()).padStart(2, '0');
+      const localTime = String(now.getHours()).padStart(2, '0') + ':' +
+                       String(now.getMinutes()).padStart(2, '0');
+
+      const createRequest: CreateRecordRequest = {
+        projectId: project.id,
+        stepId: `step-${currentStepIndex + 1}`,
+        recordType: recordFormData.recordType,
+        title: recordFormData.title,
+        content: recordFormData.content,
+        recordDate: localDate,
+        recordTime: localTime,
+        data: {
+          stepName: currentStep?.title || '',
+          stepIndex: currentStepIndex,
+          projectGenre: project.genre,
+          images: imageData.length > 0 ? imageData : undefined
+        },
+        tags: recordFormData.tags,
+        weatherInfo: recordFormData.weatherInfo,
+        locationInfo: recordFormData.locationInfo
+      };
+
+      console.log('🔄 記録作成中...', createRequest);
+      if (imageData.length > 0) {
+        console.log('📷 送信する画像データの詳細:', {
+          imageCount: imageData.length,
+          images: imageData.map((img, i) => ({
+            index: i,
+            filename: img.filename,
+            contentType: img.contentType,
+            size: img.size,
+            base64Length: img.base64Data.length,
+            base64Sample: img.base64Data.substring(0, 50) + '...'
+          }))
+        });
+      }
+
+      // AWSに記録を保存
+      const response = await recordApi.createRecord(authState.user.id, createRequest);
+
+      console.log('✅ 記録作成成功:', response);
+
+      // 成功通知
+      alert('記録が正常に保存されました！');
+
+      // 記録一覧とダッシュボードを更新（少し待機してから再読み込み）
+      setTimeout(async () => {
+        await loadUserRecords();
+        await loadDashboardData();
+        console.log('📚 記録作成後の記録一覧とダッシュボードを更新しました');
+      }, 1000);
+
+      // モーダルを閉じる
+      handleCloseRecordModal();
+
+    } catch (error) {
+      console.error('❌ 記録作成エラー:', error);
+
+      let errorMessage = '記録の保存に失敗しました。';
+
+      if (error instanceof Error) {
+        if (error.message.includes('ファイルサイズが大きすぎます')) {
+          errorMessage = error.message;
+        } else if (error.message.includes('Network')) {
+          errorMessage = 'ネットワークエラーが発生しました。インターネット接続を確認してください。';
+        } else if (error.message.includes('413') || error.message.includes('Payload Too Large')) {
+          errorMessage = '添付ファイルが大きすぎます。2MB以下の画像を選択してください。';
+        } else {
+          errorMessage = `エラー: ${error.message}`;
+        }
+      }
+
+      alert(errorMessage + '\n\nもう一度お試しください。');
+    } finally {
+      setIsCreatingRecord(false);
+    }
+  };
+
+  // 写真のみの記録を作成
+  const handleCreatePhotoRecord = async () => {
+    if (!authState.user?.id) {
+      alert('ユーザーが認証されていません。再度ログインしてください。');
+      return;
+    }
+
+    if (selectedImages.length === 0) {
+      alert('写真を選択してください。');
+      return;
+    }
+
+    setIsCreatingRecord(true);
+
+    try {
+      const currentStep = projectSteps[currentStepIndex];
+
+      // 画像をBase64に変換
+      const imageData = await Promise.all(
+        selectedImages.map(async (file, index) => ({
+          filename: file.name,
+          contentType: file.type,
+          size: file.size,
+          base64Data: await convertImageToBase64(file)
+        }))
+      );
+
+      // 現地時間で日時を設定
+      const now = new Date();
+      const localDate = now.getFullYear() + '-' +
+                       String(now.getMonth() + 1).padStart(2, '0') + '-' +
+                       String(now.getDate()).padStart(2, '0');
+      const localTime = String(now.getHours()).padStart(2, '0') + ':' +
+                       String(now.getMinutes()).padStart(2, '0');
+
+      const createRequest: CreateRecordRequest = {
+        projectId: project.id,
+        stepId: `step-${currentStepIndex + 1}`,
+        recordType: 'photo',
+        title: `写真記録 - ${currentStep?.title || 'ステップ記録'}`,
+        content: `${selectedImages.length}枚の写真を追加しました。`,
+        recordDate: localDate,
+        recordTime: localTime,
+        data: {
+          stepName: currentStep?.title || '',
+          stepIndex: currentStepIndex,
+          projectGenre: project.genre,
+          images: imageData
+        },
+        tags: ['写真', currentStep?.title || ''],
+        weatherInfo: undefined,
+        locationInfo: undefined
+      };
+
+      console.log('🔄 写真記録作成中...', createRequest);
+      console.log('📷 送信する画像データの詳細:', {
+        imageCount: imageData.length,
+        images: imageData.map((img, i) => ({
+          index: i,
+          filename: img.filename,
+          contentType: img.contentType,
+          size: img.size,
+          base64Length: img.base64Data.length,
+          base64Sample: img.base64Data.substring(0, 50) + '...'
+        }))
+      });
+
+      // AWSに記録を保存
+      const response = await recordApi.createRecord(authState.user.id, createRequest);
+
+      console.log('✅ 写真記録作成成功:', response);
+      console.log('📷 作成された記録のメディア情報:', {
+        recordId: response.record?.recordId,
+        mediaCount: response.media?.length || 0,
+        mediaData: response.media || [],
+        fullResponse: response
+      });
+
+      // 成功通知
+      alert('写真が正常に保存されました！');
+
+      // 記録一覧とダッシュボードを更新（少し待機してから再読み込み）
+      setTimeout(async () => {
+        await loadUserRecords();
+        await loadDashboardData();
+        console.log('📚 写真記録作成後の記録一覧とダッシュボードを更新しました');
+      }, 1500);
+
+      // モーダルを閉じる
+      handleClosePhotoModal();
+
+    } catch (error) {
+      console.error('❌ 写真記録作成エラー:', error);
+
+      let errorMessage = '写真の保存に失敗しました。';
+
+      if (error instanceof Error) {
+        if (error.message.includes('ファイルサイズが大きすぎます')) {
+          errorMessage = error.message;
+        } else if (error.message.includes('Network')) {
+          errorMessage = 'ネットワークエラーが発生しました。インターネット接続を確認してください。';
+        } else if (error.message.includes('413') || error.message.includes('Payload Too Large')) {
+          errorMessage = '画像ファイルが大きすぎます。2MB以下の画像を選択してください。';
+        } else {
+          errorMessage = `エラー: ${error.message}`;
+        }
+      }
+
+      alert(errorMessage + '\n\nもう一度お試しください。');
+    } finally {
+      setIsCreatingRecord(false);
+    }
   };
 
   const getGenreDisplayName = (genre: Genre) => {
@@ -422,11 +871,11 @@ const ActiveProjectPage: React.FC<ActiveProjectPageProps> = ({
         </div>
       )}
 
-      {planStatus && (
+      {/* {planStatus && (
         <div className="plan-status-notice">
           <span>ℹ️ {getPlanStatusMessage()}</span>
         </div>
-      )}
+      )} */}
 
       <div className="active-project-content">
         <div className="steps-timeline">
@@ -493,10 +942,10 @@ const ActiveProjectPage: React.FC<ActiveProjectPageProps> = ({
               )}
 
               <div className="secondary-actions">
-                <button className="secondary-btn">
-                  📝 メモを記録
+                <button className="secondary-btn" onClick={handleOpenRecordModal}>
+                  📝 記録する
                 </button>
-                <button className="secondary-btn">
+                <button className="secondary-btn" onClick={handleOpenPhotoModal}>
                   📷 写真を追加
                 </button>
                 <button className="secondary-btn">
@@ -507,6 +956,226 @@ const ActiveProjectPage: React.FC<ActiveProjectPageProps> = ({
           </div>
         </div>
       </div>
+
+      {/* 記録作成モーダル */}
+      {showRecordModal && (
+        <div className="modal-overlay" onClick={handleCloseRecordModal}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>研究記録を作成</h3>
+              <button
+                className="close-btn"
+                onClick={handleCloseRecordModal}
+                disabled={isCreatingRecord}
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="modal-body">
+              <div className="form-group">
+                <label htmlFor="recordType">記録の種類</label>
+                <select
+                  id="recordType"
+                  value={recordFormData.recordType}
+                  onChange={(e) => handleRecordFormChange('recordType', e.target.value)}
+                  disabled={isCreatingRecord}
+                  className="form-select"
+                >
+                  <option value="note">メモ</option>
+                  <option value="observation">観察記録</option>
+                  <option value="experiment">実験記録</option>
+                  <option value="data">データ記録</option>
+                  <option value="photo">写真記録</option>
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="recordTitle">タイトル</label>
+                <input
+                  id="recordTitle"
+                  type="text"
+                  value={recordFormData.title}
+                  onChange={(e) => handleRecordFormChange('title', e.target.value)}
+                  placeholder="記録のタイトルを入力してください"
+                  disabled={isCreatingRecord}
+                  className="form-input"
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="recordContent">内容</label>
+                <textarea
+                  id="recordContent"
+                  value={recordFormData.content}
+                  onChange={(e) => handleRecordFormChange('content', e.target.value)}
+                  placeholder="観察した内容、実験の結果、感想などを詳しく記録してください"
+                  disabled={isCreatingRecord}
+                  className="form-textarea"
+                  rows={6}
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="recordTags">タグ（任意）</label>
+                <input
+                  id="recordTags"
+                  type="text"
+                  placeholder="カンマ区切りでタグを入力 (例: 観察, 植物, 成長)"
+                  disabled={isCreatingRecord}
+                  className="form-input"
+                  onChange={(e) => {
+                    const tags = e.target.value.split(',').map(tag => tag.trim()).filter(tag => tag);
+                    handleRecordFormChange('tags', tags);
+                  }}
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="recordImages">写真（任意）</label>
+                <input
+                  id="recordImages"
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleImageSelect}
+                  disabled={isCreatingRecord}
+                  className="form-input"
+                />
+                <div className="form-helper-text">
+                  最大2MBまでの画像ファイル（JPG、PNG、GIF）をアップロードできます。
+                </div>
+
+                {imagePreviews.length > 0 && (
+                  <div className="image-preview-container">
+                    <div className="image-preview-label">選択された写真:</div>
+                    <div className="image-preview-grid">
+                      {imagePreviews.map((preview, index) => (
+                        <div key={index} className="image-preview-item">
+                          <img
+                            src={preview}
+                            alt={`プレビュー ${index + 1}`}
+                            className="image-preview"
+                          />
+                          <button
+                            type="button"
+                            className="image-remove-btn"
+                            onClick={() => handleRemoveImage(index)}
+                            disabled={isCreatingRecord}
+                          >
+                            ×
+                          </button>
+                          <div className="image-filename">
+                            {selectedImages[index]?.name}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="modal-footer">
+              <button
+                className="cancel-btn"
+                onClick={handleCloseRecordModal}
+                disabled={isCreatingRecord}
+              >
+                キャンセル
+              </button>
+              <button
+                className="save-btn"
+                onClick={handleCreateRecord}
+                disabled={isCreatingRecord || !recordFormData.title.trim() || !recordFormData.content.trim()}
+              >
+                {isCreatingRecord ? '保存中...' : '記録を保存'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 写真アップロードモーダル */}
+      {showPhotoModal && (
+        <div className="modal-overlay" onClick={handleClosePhotoModal}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>写真を追加</h3>
+              <button
+                className="close-btn"
+                onClick={handleClosePhotoModal}
+                disabled={isCreatingRecord}
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="modal-body">
+              <div className="form-group">
+                <label htmlFor="photoUpload">写真を選択</label>
+                <input
+                  id="photoUpload"
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleImageSelect}
+                  disabled={isCreatingRecord}
+                  className="form-input"
+                />
+                <div className="form-helper-text">
+                  最大2MBまでの画像ファイル（JPG、PNG、GIF）を複数選択できます。
+                </div>
+              </div>
+
+              {imagePreviews.length > 0 && (
+                <div className="image-preview-container">
+                  <div className="image-preview-label">選択された写真 ({selectedImages.length}枚):</div>
+                  <div className="image-preview-grid">
+                    {imagePreviews.map((preview, index) => (
+                      <div key={index} className="image-preview-item">
+                        <img
+                          src={preview}
+                          alt={`プレビュー ${index + 1}`}
+                          className="image-preview"
+                        />
+                        <button
+                          type="button"
+                          className="image-remove-btn"
+                          onClick={() => handleRemoveImage(index)}
+                          disabled={isCreatingRecord}
+                        >
+                          ×
+                        </button>
+                        <div className="image-filename">
+                          {selectedImages[index]?.name}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="modal-footer">
+              <button
+                className="cancel-btn"
+                onClick={handleClosePhotoModal}
+                disabled={isCreatingRecord}
+              >
+                キャンセル
+              </button>
+              <button
+                className="save-btn"
+                onClick={handleCreatePhotoRecord}
+                disabled={isCreatingRecord || selectedImages.length === 0}
+              >
+                {isCreatingRecord ? '保存中...' : '写真を保存'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

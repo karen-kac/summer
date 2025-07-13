@@ -476,6 +476,35 @@ class S3Client:
 
         return "/".join(path_parts)
 
+    async def generate_presigned_upload_url(self, s3_key: str, content_type: str = None,
+                                          expires_in: int = 3600) -> str:
+        """
+        署名付きアップロードURLを生成（MediaRepositoryとの互換性用）
+
+        Args:
+            s3_key: S3オブジェクトキー
+            content_type: コンテンツタイプ
+            expires_in: 有効期限（秒）
+
+        Returns:
+            str: 署名付きアップロードURL
+        """
+        result = self.generate_upload_url(s3_key, content_type, expires_in)
+        return result['upload_url']
+
+    async def generate_presigned_download_url(self, s3_key: str, expires_in: int = 3600) -> str:
+        """
+        署名付きダウンロードURLを生成（MediaRepositoryとの互換性用）
+
+        Args:
+            s3_key: S3オブジェクトキー
+            expires_in: 有効期限（秒）
+
+        Returns:
+            str: 署名付きダウンロードURL
+        """
+        return self.generate_download_url(s3_key, expires_in)
+
     async def health_check(self) -> bool:
         """
         ヘルスチェック
