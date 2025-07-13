@@ -1,8 +1,9 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from routers import theme, chat
+from routers import theme, user, record, auth, chat
 from repositories.client.dynamodb_client import get_dynamodb_client
 from repositories.client.s3_client import get_s3_client
+from datetime import datetime
 import asyncio
 import logging
 from datetime import datetime
@@ -29,6 +30,9 @@ app.add_middleware(
 # ルーター登録
 app.include_router(theme.router, prefix="/theme", tags=["テーマ"])
 app.include_router(chat.router)
+app.include_router(user.router, prefix="/user", tags=["ユーザー"])
+app.include_router(record.router, prefix="/record", tags=["記録"])
+app.include_router(auth.router)
 
 
 @app.get("/")

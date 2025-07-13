@@ -45,6 +45,8 @@ class EntityType(str, Enum):
     LINE_CONNECTION = "LineConnection"
     REPORT = "Report"
     AI_ANALYSIS = "AIAnalysis"
+    ACHIEVEMENT = "Achievement"
+    USER_ACHIEVEMENT = "UserAchievement"
 
 
 class KeyBuilder:
@@ -97,3 +99,11 @@ class KeyBuilder:
     @staticmethod
     def generate_date_based_id() -> str:
         return datetime.now().strftime("%Y%m%d%H%M%S") + "_" + str(uuid.uuid4())[:8]
+
+    @staticmethod
+    def achievement_pk(achievement_id: str) -> str:
+        return f"ACHIEVEMENT#{achievement_id}"
+
+    @staticmethod
+    def achievement_sk(achievement_id: str) -> str:
+        return f"ACHIEVEMENT#{achievement_id}"

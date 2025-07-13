@@ -153,6 +153,7 @@ export interface ResearchProject {
   customMaterials: string[];
   customSteps: string[];
   progressPercentage: number;
+  currentStepIndex: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -184,6 +185,7 @@ export interface Record {
   locationInfo?: { [key: string]: any };
   createdAt: string;
   updatedAt: string;
+  media?: any[]; // APIからのmedia配列
 }
 
 export interface Media {
@@ -363,6 +365,10 @@ export interface CreateRecordRequest {
   content: string;
   data?: { [key: string]: any };
   recordDate?: string;
+  recordTime?: string;
+  tags?: string[];
+  weatherInfo?: { [key: string]: any };
+  locationInfo?: { [key: string]: any };
 }
 
 // ダッシュボード用の集約データ型

@@ -2,7 +2,7 @@
 .chatbot-container {
   display: flex;
   flex-direction: column;
-  height: 500px;
+  height: 750px;
   background: white;
   border-radius: 18px;
   box-shadow: 0 4px 16px rgba(76, 175, 80, 0.08);
@@ -219,7 +219,7 @@
 /* レスポンシブ対応 */
 @media (max-width: 768px) {
   .chatbot-container {
-    height: 400px;
+    height: 600px;
   }
   
   .chatbot-header {

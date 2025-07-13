@@ -1,7 +1,7 @@
 # 基本ライブラリ
 fastapi==0.115.14
 uvicorn[standard]==0.35.0
-pydantic==2.11.7
+pydantic[email]==2.11.7
 pydantic_core==2.33.2
 python-dotenv==1.1.1
 
@@ -33,4 +33,3 @@ passlib[bcrypt]==1.7.4
 
 # Gemini API（必要に応じて）
 google-generativeai==0.8.5
-

@@ -70,6 +70,10 @@ class Record(DynamoDBBaseModel):
         date_str = record_date.strftime("%Y-%m-%d")
         now = datetime.now()
 
+        # 時系列でソートされるGSI1SKを作成（新しい記録が最初に来るよう）
+        # record_idには既にタイムスタンプが含まれているため、それを使用してソート可能にする
+        gsi1_sk = f"RECORD#{record_id}"
+
         return cls(
             PK=KeyBuilder.project_pk(project_id),
             SK=KeyBuilder.record_sk(date_str, sequence),
@@ -78,7 +82,7 @@ class Record(DynamoDBBaseModel):
             userId=user_id,
             recordDate=record_date,
             GSI1PK=KeyBuilder.user_pk(user_id),
-            GSI1SK=f"RECORD#{record_id}",
+            GSI1SK=gsi1_sk,
             GSI3PK=f"DATE#{date_str}",
             GSI3SK=KeyBuilder.project_pk(project_id),
             createdAt=now,
@@ -393,8 +397,8 @@ class CreateRecordRequest(BaseModel):
     recordType: Literal["observation", "experiment", "photo", "note", "data", "voice", "video"]
     title: str
     content: str
-    recordDate: date
-    recordTime: str
+    recordDate: Optional[date] = None
+    recordTime: Optional[str] = None
     data: Dict[str, Any] = {}
     tags: List[str] = []
     weatherInfo: Optional[WeatherInfo] = None
