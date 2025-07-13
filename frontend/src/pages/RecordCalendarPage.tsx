@@ -432,7 +432,7 @@ const RecordCalendarPage: React.FC<RecordCalendarPageProps> = ({
           ← 戻る
         </button>
         <h1 className="page-title">📅 記録カレンダー</h1>
-        <div style={{ display: 'flex', gap: '8px' }}>
+        {/* <div style={{ display: 'flex', gap: '8px' }}>
           <button
             className="reload-btn"
             onClick={() => {
@@ -465,7 +465,7 @@ const RecordCalendarPage: React.FC<RecordCalendarPageProps> = ({
           >
             📅 今月
           </button>
-        </div>
+        </div> */}
       </div>
 
       <div className="calendar-container">

@@ -6,6 +6,7 @@ import logging
 import hmac
 import hashlib
 import base64
+from functools import lru_cache
 
 from .auth_repository import AuthRepository
 
@@ -83,7 +84,7 @@ class CognitoAuthRepository(AuthRepository):
         }
 
     def sign_in(self, username: str, password: str) -> Dict:
-        """ユーザーサインイン"""
+        """ユーザーサインイン（ユーザー情報も同時に取得）"""
         try:
             response = self.client.initiate_auth(
                 ClientId=self.client_id,
@@ -106,15 +107,38 @@ class CognitoAuthRepository(AuthRepository):
 
             # 正常にサインイン完了
             auth_result = response['AuthenticationResult']
+            access_token = auth_result['AccessToken']
+            
+            # ユーザー情報も同時に取得してレスポンスに含める
+            try:
+                user_response = self.client.get_user(AccessToken=access_token)
+                user_attributes = {}
+                for attr in user_response['UserAttributes']:
+                    user_attributes[attr['Name']] = attr['Value']
+                
+                user_info = {
+                    'username': user_response['Username'],
+                    'attributes': user_attributes
+                }
+            except ClientError as user_error:
+                logger.warning(f"Failed to get user info during sign in: {user_error}")
+                user_info = None
+
             logger.info(f"User {username} signed in successfully")
 
-            return {
+            result = {
                 'success': True,
-                'access_token': auth_result['AccessToken'],
+                'access_token': access_token,
                 'id_token': auth_result['IdToken'],
                 'refresh_token': auth_result['RefreshToken'],
                 'expires_in': auth_result['ExpiresIn']
             }
+            
+            # ユーザー情報が取得できた場合は含める
+            if user_info:
+                result['user_info'] = user_info
+
+            return result
 
         except ClientError as e:
             error_code = e.response['Error']['Code']
@@ -235,6 +259,7 @@ class CognitoAuthRepository(AuthRepository):
                 'message': e.response['Error']['Message']
             }
 
+    @lru_cache(maxsize=128)
     def _get_secret_hash(self, username: str) -> str:
         """SECRET_HASHを生成（Client Secretが設定されている場合）"""
         if not self.client_secret:

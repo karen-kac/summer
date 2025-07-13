@@ -861,3 +861,122 @@
     font-size: 9px;
   }
 }
+
+/* 研究完了メッセージ */
+.completion-message {
+  max-width: 500px;
+  text-align: center;
+  background: linear-gradient(135deg, #fff9c4 0%, #fff59d 100%);
+  border: 3px solid #ffd54f;
+  box-shadow: 0 8px 32px rgba(255, 193, 7, 0.3);
+}
+
+.completion-header {
+  padding: 30px 20px 20px;
+}
+
+.completion-icon {
+  font-size: 64px;
+  margin-bottom: 15px;
+  animation: bounce 1s ease-in-out;
+}
+
+.completion-header h2 {
+  color: #f57c00;
+  font-size: 28px;
+  margin: 0;
+  font-weight: bold;
+}
+
+.completion-body {
+  padding: 0 30px 30px;
+}
+
+.completion-body h3 {
+  color: #333;
+  font-size: 20px;
+  margin-bottom: 15px;
+  font-weight: 600;
+}
+
+.completion-body p {
+  color: #555;
+  font-size: 16px;
+  line-height: 1.6;
+  margin-bottom: 12px;
+}
+
+.completion-footer {
+  padding: 0 30px 30px;
+}
+
+.completion-btn {
+  background: linear-gradient(135deg, #ff9800 0%, #ff5722 100%);
+  color: white;
+  border: none;
+  padding: 15px 40px;
+  border-radius: 25px;
+  font-size: 18px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(255, 152, 0, 0.3);
+}
+
+.completion-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 152, 0, 0.4);
+  background: linear-gradient(135deg, #ff5722 0%, #e64a19 100%);
+}
+
+@keyframes bounce {
+  0%, 20%, 50%, 80%, 100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-10px);
+  }
+  60% {
+    transform: translateY(-5px);
+  }
+}
+
+@media (max-width: 768px) {
+  .completion-message {
+    max-width: 90%;
+    margin: 20px;
+  }
+  
+  .completion-header {
+    padding: 20px 15px 15px;
+  }
+  
+  .completion-icon {
+    font-size: 48px;
+  }
+  
+  .completion-header h2 {
+    font-size: 24px;
+  }
+  
+  .completion-body {
+    padding: 0 20px 20px;
+  }
+  
+  .completion-body h3 {
+    font-size: 18px;
+  }
+  
+  .completion-body p {
+    font-size: 14px;
+  }
+  
+  .completion-footer {
+    padding: 0 20px 20px;
+  }
+  
+  .completion-btn {
+    padding: 12px 30px;
+    font-size: 16px;
+  }
+}

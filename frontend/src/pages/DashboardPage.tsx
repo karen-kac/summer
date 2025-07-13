@@ -147,7 +147,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
       {/* 下段：3つ横並び */}
       <div className="dashboard-row">
         <div className="card stats-card">
-          <div className="card-title">📊 統計情報</div>
+          <div className="card-title">📊 成長記録</div>
           <div className="stats-grid">
             <div className="stat-item">
               <span className="stat-icon">🌟</span>
@@ -223,10 +223,10 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
           <span className="qa-icon">📝</span>
           <span className="qa-label">記録カレンダー</span>
         </button>
-        <button className="quick-action-btn" onClick={onViewLearning}>
+        {/* <button className="quick-action-btn" onClick={onViewLearning}>
           <span className="qa-icon">⚙️</span>
           <span className="qa-label">設定</span>
-        </button>
+        </button> */}
       </div>
     </div>
   );
