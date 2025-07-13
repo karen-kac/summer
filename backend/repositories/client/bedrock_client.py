@@ -161,3 +161,9 @@ class BedrockClient:
                 status_code=500,
                 detail=f"AI処理中に予期しないエラーが発生しました: {e}"
             )
+    
+    async def generate_chat_response(self, prompt: str) -> str:
+        """
+        チャットボット用のテキスト応答を生成
+        """
+        return await self.generate_content(prompt)

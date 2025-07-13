@@ -11,6 +11,7 @@ interface ActiveProjectPageProps {
   project: ResearchProject;
   onBack: () => void;
   onUpdateProgress: (projectId: string, stepIndex: number) => void;
+  onOpenChat?: () => void;
 }
 
 interface StepTemplate {
@@ -23,7 +24,8 @@ interface StepTemplate {
 const ActiveProjectPage: React.FC<ActiveProjectPageProps> = ({
   project,
   onBack,
-  onUpdateProgress
+  onUpdateProgress,
+  onOpenChat
 }) => {
   const navigate = useNavigate();
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
@@ -948,7 +950,7 @@ const ActiveProjectPage: React.FC<ActiveProjectPageProps> = ({
                 <button className="secondary-btn" onClick={handleOpenPhotoModal}>
                   📷 写真を追加
                 </button>
-                <button className="secondary-btn">
+                <button className="secondary-btn" onClick={onOpenChat}>
                   🤖 AI先生に質問
                 </button>
               </div>

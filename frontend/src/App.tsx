@@ -21,6 +21,7 @@ import ThemeResultsPage from './pages/ThemeResultsPage';
 import SelectedThemePage from './pages/SelectedThemePage';
 import ActiveProjectPage from './pages/ActiveProjectPage';
 import RecordCalendarPage from './pages/RecordCalendarPage';
+import { ChatPage } from './pages/ChatPage';
 import HelpPage from './pages/HelpPage';
 
 import type { Record, UserProfile, ResearchProject, ResearchTheme, UserStats, Achievement } from './types';
@@ -168,6 +169,7 @@ const DashboardPageWrapper: React.FC = () => {
   };
 
   const handleOpenAITutor = () => {
+    navigate('/chat');
     navigate('/help');
   };
 
@@ -349,7 +351,10 @@ const ActiveProjectPageWrapper: React.FC = () => {
     navigate('/dashboard');
   };
 
-  // selectedProjectがある場合はそれを使用、なければactiveProjectsから検索
+  const handleOpenChat = () => {
+    navigate('/chat');
+  };
+
   const currentProject = selectedProject || (params.id ? activeProjects.find(p => p.id === params.id) : null);
 
   if (!currentProject) {
@@ -370,8 +375,19 @@ const ActiveProjectPageWrapper: React.FC = () => {
       project={currentProject}
       onBack={handleBack}
       onUpdateProgress={handleUpdateProjectProgress}
+      onOpenChat={handleOpenChat}
     />
   );
+};
+
+const ChatPageWrapper: React.FC = () => {
+  const navigate = useNavigate();
+
+  const handleBack = () => {
+    navigate('/dashboard');
+  };
+
+  return <ChatPage />;
 };
 
 const RecordCalendarPageWrapper: React.FC = () => {
@@ -510,6 +526,10 @@ const router = createBrowserRouter([
       {
         path: 'records',
         element: <RecordCalendarPageWrapper />,
+      },
+      {
+        path: 'chat',
+        element: <ChatPageWrapper />,
       },
       {
         path: 'help',

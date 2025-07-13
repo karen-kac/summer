@@ -31,6 +31,14 @@ class ThemeRepository:
         prompt = self.builder.build_research_plan_prompt(theme, user_profile)
         plan_data = await self.bedrock_client.post_prompt(prompt)
         return plan_data
+    
+    async def process_chat_message(self, message: str, project_context: dict, media_analysis: str = None) -> str:
+        """
+        チャットメッセージを処理してAI応答を生成
+        """
+        prompt = self.builder.build_chat_prompt(message, project_context, media_analysis)
+        response = await self.bedrock_client.generate_chat_response(prompt)
+        return response
 
     async def save_theme(self, theme_data: Dict[str, Any]) -> Optional[ResearchTheme]:
         """
