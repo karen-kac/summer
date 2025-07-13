@@ -41,8 +41,11 @@ async def login(request: LoginRequest, auth_service = Depends(get_auth_service))
                 detail=result.get('message', 'Authentication failed')
             )
 
-        # フロントエンド互換のレスポンスを作成
-        user_info = auth_service.get_user_profile(result['access_token'])
+        # ユーザー情報を認証レスポンスから取得（追加のAPI呼び出し不要）
+        user_info = result.get('user_info')
+        if not user_info:
+            # フォールバック: ユーザー情報が含まれていない場合のみ別途取得
+            user_info = auth_service.get_user_profile(result['access_token'])
 
         user = User(
             id=user_info.get('username', 'user-1'),

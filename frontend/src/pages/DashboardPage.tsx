@@ -223,10 +223,10 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
           <span className="qa-icon">📝</span>
           <span className="qa-label">記録カレンダー</span>
         </button>
-        <button className="quick-action-btn" onClick={onViewLearning}>
+        {/* <button className="quick-action-btn" onClick={onViewLearning}>
           <span className="qa-icon">⚙️</span>
           <span className="qa-label">設定</span>
-        </button>
+        </button> */}
       </div>
     </div>
   );
