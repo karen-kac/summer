@@ -50,6 +50,9 @@ const ActiveProjectPage: React.FC<ActiveProjectPageProps> = ({
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [showPhotoModal, setShowPhotoModal] = useState(false);
 
+  // 研究完了メッセージ関連の状態
+  const [showCompletionMessage, setShowCompletionMessage] = useState(false);
+
   // AppContextからユーザー情報を取得
   const { authState, loadUserRecords, loadDashboardData } = useApp();
 
@@ -408,6 +411,9 @@ const ActiveProjectPage: React.FC<ActiveProjectPageProps> = ({
       console.log('🏁 最後のステップです。プロジェクトを完了させます');
       const newStepIndex = currentStepIndex;
       onUpdateProgress(project.id, newStepIndex);
+      
+      // 研究完了のメッセージを表示
+      setShowCompletionMessage(true);
     }
   };
 
@@ -1171,6 +1177,32 @@ const ActiveProjectPage: React.FC<ActiveProjectPageProps> = ({
                 disabled={isCreatingRecord || selectedImages.length === 0}
               >
                 {isCreatingRecord ? '保存中...' : '写真を保存'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 研究完了メッセージ */}
+      {showCompletionMessage && (
+        <div className="modal-overlay" onClick={() => setShowCompletionMessage(false)}>
+          <div className="modal-content completion-message" onClick={(e) => e.stopPropagation()}>
+            <div className="completion-header">
+              <div className="completion-icon">🎉</div>
+              <h2>お疲れ様でした！</h2>
+            </div>
+            <div className="completion-body">
+              <h3>研究「{project.title}」が完了しました！</h3>
+              <p>あなたの努力と探求心が素晴らしい研究を生み出しました。</p>
+              <p>この経験は、きっと将来の学びに活かされることでしょう。</p>
+              <p>ダッシュボードで研究の記録を振り返ることができます。</p>
+            </div>
+            <div className="completion-footer">
+              <button 
+                className="completion-btn"
+                onClick={() => setShowCompletionMessage(false)}
+              >
+                ありがとう！
               </button>
             </div>
           </div>

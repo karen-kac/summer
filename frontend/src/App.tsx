@@ -405,7 +405,7 @@ const RecordCalendarPageWrapper: React.FC = () => {
         date: new Date(record.recordDate || '').toLocaleDateString('ja-JP')
       });
 
-      alert('記録が正常に追加されました！');
+      // alert('記録が正常に追加されました！');
     } catch (error) {
       console.error('❌ 記録追加エラー:', error);
       alert('記録の追加に失敗しました。もう一度お試しください。');

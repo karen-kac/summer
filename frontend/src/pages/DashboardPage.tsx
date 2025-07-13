@@ -147,7 +147,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
       {/* 下段：3つ横並び */}
       <div className="dashboard-row">
         <div className="card stats-card">
-          <div className="card-title">📊 統計情報</div>
+          <div className="card-title">📊 成長記録</div>
           <div className="stats-grid">
             <div className="stat-item">
               <span className="stat-icon">🌟</span>
