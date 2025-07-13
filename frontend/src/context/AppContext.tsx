@@ -467,7 +467,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       };
 
       const user: User = {
-        id: "d8f5c258-2bf9-4801-8e65-865a2e5c33e5", // 実際の記録が保存されているユーザーID
+        id: response.user.profile.userId, // APIから返された実際のユーザーID
         email: response.user.profile.email,
         name: response.user.profile.displayName,
         profile: userProfile,
@@ -508,7 +508,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       };
 
       const user: User = {
-        id: "d8f5c258-2bf9-4801-8e65-865a2e5c33e5", // 実際の記録が保存されているユーザーID
+        id: response.profile.userId, // APIから返された実際のユーザーID
         email: response.profile.email,
         name: response.profile.displayName,
         profile: userProfile,
@@ -519,7 +519,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       setAuthState({
         isAuthenticated: true,
         user: user,
-        token: `token-${user.id}`,
+        token: response.access_token || `token-${user.id}`,
         isLoading: false
       });
       setUserProfile(userProfile);

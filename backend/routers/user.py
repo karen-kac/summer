@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Query
 from typing import Dict, Any, List
 from pydantic import BaseModel
 from datetime import date
@@ -310,8 +310,8 @@ class UpdateProjectProgressRequest(BaseModel):
 
 @router.post("/projects")
 async def create_project_from_theme(
-    user_id: str,
     request: CreateProjectFromThemeRequest,
+    user_id: str = Query(..., description="ユーザーID"),
     project_repo: ProjectRepository = Depends(get_project_repository),
     achievement_service: AchievementService = Depends(get_achievement_service)
 ) -> Dict[str, Any]:
