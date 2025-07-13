@@ -803,7 +803,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       };
 
       const user: User = {
-        id: "d8f5c258-2bf9-4801-8e65-865a2e5c33e5", // 実際の記録が保存されているユーザーID
+        id: response.user.profile.userId,
         email: response.user.profile.email,
         name: response.user.profile.displayName,
         profile: userProfile,
@@ -848,7 +848,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       };
 
       const user: User = {
-        id: "d8f5c258-2bf9-4801-8e65-865a2e5c33e5", // 実際の記録が保存されているユーザーID
+        id: response.profile.userId,
         email: response.profile.email,
         name: response.profile.displayName,
         profile: userProfile,
