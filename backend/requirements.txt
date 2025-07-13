@@ -33,4 +33,3 @@ passlib[bcrypt]==1.7.4
 
 # Gemini API（必要に応じて）
 google-generativeai==0.8.5
-
